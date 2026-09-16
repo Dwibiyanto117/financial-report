@@ -1,0 +1,73 @@
+// Prisma Schema — Personal Finance Web App (FinReport)
+// Skema database deklaratif dan mudah dibaca
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id                      Int           @id @default(autoincrement())
+  name                    String        @db.VarChar(100)
+  email                   String        @unique @db.VarChar(191)
+  passwordHash            String        @map("password_hash") @db.VarChar(255)
+  recoveryToken           String?       @map("recovery_token") @db.VarChar(100)
+  recoveryTokenExpiresAt  DateTime?     @map("recovery_token_expires_at")
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+
+  // Relasi
+  categories              Category[]
+  transactions            Transaction[]
+
+  @@map("users")
+}
+
+model Category {
+  id          Int              @id @default(autoincrement())
+  userId      Int?             @map("user_id")
+  name        String           @db.VarChar(100)
+  type        TransactionType
+  icon        String           @default("tag") @db.VarChar(50)
+  color       String           @default("#6B7280") @db.VarChar(20)
+  isDefault   Boolean          @default(false) @map("is_default")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relasi
+  user        User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId, type])
+  @@map("categories")
+}
+
+model Transaction {
+  id              Int              @id @default(autoincrement())
+  userId          Int              @map("user_id")
+  categoryId      Int              @map("category_id")
+  type            TransactionType
+  amount          Decimal          @db.Decimal(15, 2)
+  currency        String           @default("IDR") @db.VarChar(10)
+  transactionDate DateTime         @map("transaction_date") @db.Date
+  description     String?          @db.VarChar(255)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  // Relasi
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, transactionDate])
+  @@index([userId, categoryId])
+  @@map("transactions")
+}
