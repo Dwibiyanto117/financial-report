@@ -22,3 +22,11 @@
 - Tidak ada credentials di source code (`.env` only).
 - Sinkronisasi dokumentasi `dev-docs/` di setiap milestone.
 - Commit dan push teratur ke branch pengembangan.
+
+---
+
+## 3. Post-MVP
+| Milestone | Target Output | Scope |
+|-----------|---------------|-------|
+| **M7: Multi Rekening** | MOD-07 | Rekening, transfer, migrasi data, UI (M7.1-M7.2) |
+| **M8: Statement Import** | MOD-08 | Pipeline import, adapter BCA/Mandiri/e-wallet, UI (M8.1-M8.4) |

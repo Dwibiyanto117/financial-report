@@ -77,3 +77,12 @@ Sistem dipecah menjadi 5 modul fungsional utama dan 1 modul utilitas:
 ### MOD-06: Common & Utility Module
 - **Currency Helper**: `formatCurrency(amount, currency = 'IDR')` terstandarisasi di frontend dan backend.
 - **Error Handling**: Format respon API terpusat `{ success: boolean, message: string, data: any, errors?: any[] }`.
+
+---
+
+## 3. Modul Post-MVP
+
+| Modul | Deskripsi | Status |
+|-------|-----------|--------|
+| `MOD-07: Account` | Multi rekening (bank, e-wallet, tunai), saldo per rekening, transfer | Proposed |
+| `MOD-08: Statement Import` | Import mutasi CSV/XLSX per rekening, preview, deteksi duplikat, auto-kategori, rollback | Proposed |

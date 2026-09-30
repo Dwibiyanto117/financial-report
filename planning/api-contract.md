@@ -245,3 +245,8 @@ Authorization: Bearer <jwt_access_token>
 #### `GET /api/reports/export/pdf?start_date=...&end_date=...`
 - **Content-Type**: `application/pdf`
 - **Deskripsi**: Menghasilkan berkas PDF siap cetak laporan ringkasan dan daftar mutasi transaksi.
+
+---
+
+## 3. Endpoint Post-MVP (PROPOSED)
+Endpoint `/api/accounts`, `/api/transfers`, `/api/imports/*`, `/api/category-rules`. Detail: `planning/bank-import.md` bagian 8.

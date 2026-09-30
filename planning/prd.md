@@ -85,3 +85,8 @@ Pengguna membutuhkan solusi pencatatan keuangan yang fleksibel dan cepat saat mo
 - **Keamanan**: Hash password dengan bcrypt (salt rounds >= 10), token JWT dengan waktu kedaluwarsa, sanitasi input untuk mencegah SQL injection dan XSS.
 - **Isolasi Data**: Enforce `WHERE user_id = :current_user` di semua query query data transaksi dan kategori.
 - **Responsif**: Kompatibel dengan layar smartphone (>= 320px) hingga layar monitor desktop (>= 1920px).
+
+---
+
+## 5. Post-MVP Feature: Bank Statement Import (PROPOSED)
+Integrasi bank tahap 1: multi rekening (US-017 s/d US-019) dan import mutasi CSV/XLSX (US-020 s/d US-025). PDF ditunda. Spesifikasi: `planning/bank-import.md`.

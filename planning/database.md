@@ -114,3 +114,8 @@ erDiagram
 ## 5. Seed Data Bawaan (Default Categories)
 - **Pemasukan (INCOME)**: Gaji (*Salary*), Bonus, Investasi & Dividen, Pendapatan Usaha, Lainnya.
 - **Pengeluaran (EXPENSE)**: Makanan & Minuman, Transportasi, Tempat Tinggal & Sewa, Tagihan & Utilitas, Belanja Kebutuhan, Hiburan & Rekreasi, Kesehatan & Medis, Pendidikan, Donasi / Amal, Lainnya.
+
+---
+
+## 6. Perubahan Skema Post-MVP (PROPOSED)
+Tabel baru `accounts`, `import_batches`, `category_rules`; kolom baru `account_id`, `transfer_group_id`, `import_batch_id`, `import_fingerprint` pada `transactions`; enum TransactionType + TRANSFER_IN/TRANSFER_OUT. Detail: `planning/bank-import.md` bagian 7.
