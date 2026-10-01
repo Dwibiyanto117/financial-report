@@ -40,10 +40,27 @@ app.use("/api/reports", reportRoutes);
 
 // Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
+  const isPrismaValidationError = err.name === "PrismaClientValidationError";
+  const isPrismaKnownError = err.name === "PrismaClientKnownRequestError";
+
+  // Kesalahan input dari klien (tanggal/argumen tidak valid) tidak boleh
+  // diteruskan sebagai kegagalan internal beserta detail query database.
+  let statusCode = err.statusCode || 500;
+  if (!err.statusCode && (isPrismaValidationError || isPrismaKnownError)) {
+    statusCode = 400;
+  }
+
+  if (statusCode >= 500) {
+    console.error("[error]", req.method, req.originalUrl, "-", err.message);
+  }
+
+  const message = statusCode >= 500 && !err.statusCode
+    ? "Terjadi kesalahan internal pada server"
+    : err.message;
+
   res.status(statusCode).json({
     success: false,
-    message: err.message || "Terjadi kesalahan internal pada server",
+    message: message || "Terjadi kesalahan internal pada server",
     errors: err.errors || []
   });
 });

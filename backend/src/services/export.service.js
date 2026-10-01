@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import PdfPrinter from "pdfmake";
 import prisma from "../config/prisma.js";
+import { parseDateRange } from "../utils/query.js";
 
 // Setup font standar untuk PDFMake
 const fonts = {
@@ -14,12 +15,27 @@ const fonts = {
 
 const printer = new PdfPrinter(fonts);
 
+/**
+ * Filter tanggal untuk laporan ekspor.
+ * Menerima `start_date`/`startDate` dan `end_date`/`endDate`, dan menolak
+ * nilai tak valid dengan pesan yang jelas alih-alih gagal di lapisan query.
+ */
+function buildReportDateFilter(query) {
+  const { startDate, endDate } = parseDateRange(query);
+
+  if (!startDate && !endDate) return {};
+
+  const filter = {};
+  if (startDate) filter.gte = startDate;
+  if (endDate) filter.lte = endDate;
+  return filter;
+}
+
 export const generateExcelReport = async (userId, query = {}) => {
   const whereClause = { userId };
-  if (query.startDate || query.endDate) {
-    whereClause.transactionDate = {};
-    if (query.startDate) whereClause.transactionDate.gte = new Date(query.startDate);
-    if (query.endDate) whereClause.transactionDate.lte = new Date(query.endDate);
+  const dateFilter = buildReportDateFilter(query);
+  if (Object.keys(dateFilter).length > 0) {
+    whereClause.transactionDate = dateFilter;
   }
 
   const [user, transactions] = await Promise.all([
@@ -146,10 +162,9 @@ export const generateExcelReport = async (userId, query = {}) => {
 
 export const generatePdfReport = async (userId, query = {}) => {
   const whereClause = { userId };
-  if (query.startDate || query.endDate) {
-    whereClause.transactionDate = {};
-    if (query.startDate) whereClause.transactionDate.gte = new Date(query.startDate);
-    if (query.endDate) whereClause.transactionDate.lte = new Date(query.endDate);
+  const dateFilter = buildReportDateFilter(query);
+  if (Object.keys(dateFilter).length > 0) {
+    whereClause.transactionDate = dateFilter;
   }
 
   const [user, transactions] = await Promise.all([

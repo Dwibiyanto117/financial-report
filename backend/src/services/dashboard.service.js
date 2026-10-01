@@ -1,4 +1,48 @@
 import prisma from "../config/prisma.js";
+import { parseDateRange, parseIntParam, getParam } from "../utils/query.js";
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+/**
+ * Rentang tanggal yang dipakai seluruh endpoint dashboard.
+ *
+ * Bila klien mengirim rentang eksplisit, rentang itu dipakai apa adanya.
+ * Bila tidak, sistem jatuh ke bulan berjalan. Bila klien mengirim `month`
+ * dan/atau `year` (sesuai kontrak API), kombinasi itu yang dipakai sehingga
+ * permintaan seperti `?month=9&year=2026` tidak lagi diabaikan diam-diam.
+ */
+function resolvePeriod(query) {
+  const { startDate, endDate } = parseDateRange(query);
+
+  if (startDate || endDate) {
+    return { startDate, endDate };
+  }
+
+  const now = new Date();
+  const requestedMonth = parseIntParam(getParam(query, "month"), "bulan", { strict: true, min: 1, max: 12 });
+  const requestedYear = parseIntParam(getParam(query, "year"), "tahun", { strict: true, min: 1970, max: 9999 });
+
+  if (requestedMonth !== null || requestedYear !== null) {
+    const year = requestedYear ?? now.getFullYear();
+    const monthIndex = (requestedMonth ?? now.getMonth() + 1) - 1;
+    return {
+      startDate: new Date(year, monthIndex, 1),
+      endDate: new Date(year, monthIndex + 1, 0, 23, 59, 59)
+    };
+  }
+
+  return {
+    startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+    endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+  };
+}
+
+function buildDateFilter({ startDate, endDate }) {
+  const filter = {};
+  if (startDate) filter.gte = startDate;
+  if (endDate) filter.lte = endDate;
+  return filter;
+}
 
 export const getSummary = async (userId, query = {}) => {
   // 1. Kalkulasi Running Balance (sepanjang masa)
@@ -18,19 +62,8 @@ export const getSummary = async (userId, query = {}) => {
   const runningBalance = totalAllTimeIncome - totalAllTimeExpense;
 
   // 2. Kalkulasi Metrik Periode Tertentu
-  let startDate = query.startDate ? new Date(query.startDate) : null;
-  let endDate = query.endDate ? new Date(query.endDate) : null;
-
-  // Default jika tidak ada filter: Bulan berjalan
-  if (!startDate && !endDate) {
-    const now = new Date();
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  }
-
-  const periodDateFilter = {};
-  if (startDate) periodDateFilter.gte = startDate;
-  if (endDate) periodDateFilter.lte = endDate;
+  const period = resolvePeriod(query);
+  const periodDateFilter = buildDateFilter(period);
 
   const [periodIncomeAgg, periodExpenseAgg, transactionCount] = await Promise.all([
     prisma.transaction.aggregate({
@@ -64,8 +97,8 @@ export const getSummary = async (userId, query = {}) => {
   return {
     runningBalance,
     period: {
-      startDate: startDate ? startDate.toISOString().split("T")[0] : null,
-      endDate: endDate ? endDate.toISOString().split("T")[0] : null,
+      startDate: period.startDate ? period.startDate.toISOString().split("T")[0] : null,
+      endDate: period.endDate ? period.endDate.toISOString().split("T")[0] : null,
       income: periodIncome,
       expense: periodExpense,
       net: netBalance,
@@ -76,20 +109,9 @@ export const getSummary = async (userId, query = {}) => {
 };
 
 export const getCategoryBreakdown = async (userId, query = {}) => {
-  const type = query.type === "INCOME" ? "INCOME" : "EXPENSE";
+  const type = getParam(query, "type")?.toUpperCase() === "INCOME" ? "INCOME" : "EXPENSE";
 
-  let startDate = query.startDate ? new Date(query.startDate) : null;
-  let endDate = query.endDate ? new Date(query.endDate) : null;
-
-  if (!startDate && !endDate) {
-    const now = new Date();
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  }
-
-  const periodDateFilter = {};
-  if (startDate) periodDateFilter.gte = startDate;
-  if (endDate) periodDateFilter.lte = endDate;
+  const periodDateFilter = buildDateFilter(resolvePeriod(query));
 
   // Query transaksi dalam periode dengan kategorinya
   const transactions = await prisma.transaction.findMany({
@@ -151,7 +173,7 @@ export const getCategoryBreakdown = async (userId, query = {}) => {
 
 export const getMonthlyTrend = async (userId, query = {}) => {
   const currentYear = new Date().getFullYear();
-  const year = parseInt(query.year) || currentYear;
+  const year = parseIntParam(getParam(query, "year"), "tahun", { strict: true, min: 1970, max: 9999 }) ?? currentYear;
 
   const startOfYear = new Date(year, 0, 1);
   const endOfYear = new Date(year, 11, 31, 23, 59, 59);
@@ -171,9 +193,7 @@ export const getMonthlyTrend = async (userId, query = {}) => {
     }
   });
 
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-
-  const trend = monthNames.map((name, index) => ({
+  const trend = MONTH_NAMES.map((name, index) => ({
     month: name,
     monthIndex: index + 1,
     income: 0,

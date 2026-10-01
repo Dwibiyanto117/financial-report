@@ -10,10 +10,10 @@ export const register = async (req, res, next) => {
       });
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password minimal 6 karakter"
+        message: "Password minimal 8 karakter"
       });
     }
 
@@ -80,10 +80,10 @@ export const resetPassword = async (req, res, next) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password baru minimal 6 karakter"
+        message: "Password baru minimal 8 karakter"
       });
     }
 

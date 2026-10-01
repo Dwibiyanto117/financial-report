@@ -1,26 +1,27 @@
 import prisma from "../config/prisma.js";
+import { parseDateRange, parseDateParam, parseIntParam, parseEnumParam, getParam } from "../utils/query.js";
 
-export const createTransaction = async (userId, { categoryId, type, amount, transactionDate, description }) => {
-  const numAmount = parseFloat(amount);
-  if (isNaN(numAmount) || numAmount <= 0) {
-    const error = new Error("Nominal transaksi harus berupa angka positif");
-    error.statusCode = 400;
-    throw error;
-  }
+const TRANSACTION_TYPES = ["INCOME", "EXPENSE"];
 
-  if (type !== "INCOME" && type !== "EXPENSE") {
-    const error = new Error("Tipe transaksi harus INCOME atau EXPENSE");
-    error.statusCode = 400;
-    throw error;
-  }
+const CATEGORY_SELECT = {
+  id: true,
+  name: true,
+  type: true,
+  icon: true,
+  color: true
+};
 
-  // Validasi kategori milik user atau bawaan sistem
+/**
+ * Memastikan kategori yang dipilih benar-benar milik user atau kategori
+ * bawaan sistem.
+ */
+async function resolveCategory(userId, categoryId) {
   const category = await prisma.category.findFirst({
     where: {
       id: Number(categoryId),
       OR: [
         { isDefault: true, userId: null },
-        { userId: userId }
+        { userId }
       ]
     }
   });
@@ -31,61 +32,101 @@ export const createTransaction = async (userId, { categoryId, type, amount, tran
     throw error;
   }
 
-  const parsedDate = transactionDate ? new Date(transactionDate) : new Date();
+  return category;
+}
+
+/**
+ * Kategori bertipe INCOME hanya untuk pemasukan, EXPENSE hanya untuk
+ * pengeluaran. Tanpa aturan ini saldo berjalan dan grafik komposisi kategori
+ * menjadi tidak konsisten dengan tipe transaksinya.
+ */
+function assertCategoryMatchesType(category, type) {
+  if (category.type !== type) {
+    const error = new Error(
+      `Kategori "${category.name}" bertipe ${category.type}, tidak dapat dipakai untuk transaksi ${type}`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function parseAmount(amount) {
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) {
+    const error = new Error("Nominal transaksi harus berupa angka positif");
+    error.statusCode = 400;
+    throw error;
+  }
+  return numAmount;
+}
+
+function requireTransactionType(value) {
+  const type = parseEnumParam(value, "tipe transaksi", TRANSACTION_TYPES);
+  if (!type) {
+    const error = new Error("Tipe transaksi wajib diisi (INCOME atau EXPENSE)");
+    error.statusCode = 400;
+    throw error;
+  }
+  return type;
+}
+
+export const createTransaction = async (userId, { categoryId, type, amount, transactionDate, description }) => {
+  const numAmount = parseAmount(amount);
+  const transactionType = requireTransactionType(type);
+
+  const category = await resolveCategory(userId, categoryId);
+  assertCategoryMatchesType(category, transactionType);
+
+  const parsedDate = transactionDate
+    ? parseDateParam(String(transactionDate), "tanggal transaksi")
+    : new Date();
 
   return await prisma.transaction.create({
     data: {
       userId,
       categoryId: category.id,
-      type,
+      type: transactionType,
       amount: numAmount,
       currency: "IDR",
       transactionDate: parsedDate,
-      description: description ? description.trim() : null
+      description: description ? String(description).trim() : null
     },
     include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          icon: true,
-          color: true
-        }
-      }
+      category: { select: CATEGORY_SELECT }
     }
   });
 };
 
 export const getTransactions = async (userId, query = {}) => {
-  const page = Math.max(1, parseInt(query.page) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(query.limit) || 20));
+  const page = parseIntParam(getParam(query, "page"), "halaman", { min: 1 }) ?? 1;
+  const limit = parseIntParam(getParam(query, "limit"), "batas data", { min: 1, max: 100 }) ?? 20;
   const skip = (page - 1) * limit;
 
   const whereClause = { userId };
 
-  if (query.type && (query.type === "INCOME" || query.type === "EXPENSE")) {
-    whereClause.type = query.type;
+  const typeFilter = parseEnumParam(getParam(query, "type"), "tipe transaksi", TRANSACTION_TYPES);
+  if (typeFilter) {
+    whereClause.type = typeFilter;
   }
 
-  if (query.categoryId) {
-    whereClause.categoryId = Number(query.categoryId);
+  const categoryId = parseIntParam(getParam(query, "categoryId", "category_id"), "kategori", {
+    strict: true,
+    min: 1
+  });
+  if (categoryId !== null) {
+    whereClause.categoryId = categoryId;
   }
 
-  if (query.startDate || query.endDate) {
+  const { startDate, endDate } = parseDateRange(query);
+  if (startDate || endDate) {
     whereClause.transactionDate = {};
-    if (query.startDate) {
-      whereClause.transactionDate.gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      whereClause.transactionDate.lte = new Date(query.endDate);
-    }
+    if (startDate) whereClause.transactionDate.gte = startDate;
+    if (endDate) whereClause.transactionDate.lte = endDate;
   }
 
-  if (query.search) {
-    whereClause.description = {
-      contains: query.search.trim()
-    };
+  const search = getParam(query, "search");
+  if (search) {
+    whereClause.description = { contains: search };
   }
 
   const [total, items] = await Promise.all([
@@ -99,15 +140,7 @@ export const getTransactions = async (userId, query = {}) => {
         { id: "desc" }
       ],
       include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            icon: true,
-            color: true
-          }
-        }
+        category: { select: CATEGORY_SELECT }
       }
     })
   ]);
@@ -149,64 +182,42 @@ export const updateTransaction = async (userId, id, data) => {
   const updatePayload = {};
 
   if (data.amount !== undefined) {
-    const numAmount = parseFloat(data.amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      const error = new Error("Nominal transaksi harus berupa angka positif");
-      error.statusCode = 400;
-      throw error;
-    }
-    updatePayload.amount = numAmount;
+    updatePayload.amount = parseAmount(data.amount);
   }
 
   if (data.type !== undefined) {
-    if (data.type !== "INCOME" && data.type !== "EXPENSE") {
-      const error = new Error("Tipe transaksi harus INCOME atau EXPENSE");
-      error.statusCode = 400;
-      throw error;
-    }
-    updatePayload.type = data.type;
+    updatePayload.type = requireTransactionType(data.type);
   }
 
   if (data.categoryId !== undefined) {
-    const category = await prisma.category.findFirst({
-      where: {
-        id: Number(data.categoryId),
-        OR: [
-          { isDefault: true, userId: null },
-          { userId }
-        ]
-      }
-    });
-
-    if (!category) {
-      const error = new Error("Kategori yang dipilih tidak valid");
-      error.statusCode = 400;
-      throw error;
-    }
+    const category = await resolveCategory(userId, data.categoryId);
     updatePayload.categoryId = category.id;
   }
 
+  // Konsistensi kategori dan tipe diperiksa terhadap nilai akhir transaksi,
+  // sehingga mengubah salah satu saja tetap menghasilkan data yang sah.
+  const nextType = updatePayload.type ?? existing.type;
+  const nextCategory = updatePayload.categoryId !== undefined
+    ? await prisma.category.findUnique({ where: { id: updatePayload.categoryId } })
+    : existing.category;
+
+  if (nextCategory) {
+    assertCategoryMatchesType(nextCategory, nextType);
+  }
+
   if (data.transactionDate !== undefined) {
-    updatePayload.transactionDate = new Date(data.transactionDate);
+    updatePayload.transactionDate = parseDateParam(String(data.transactionDate), "tanggal transaksi");
   }
 
   if (data.description !== undefined) {
-    updatePayload.description = data.description ? data.description.trim() : null;
+    updatePayload.description = data.description ? String(data.description).trim() : null;
   }
 
   return await prisma.transaction.update({
     where: { id: existing.id },
     data: updatePayload,
     include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          icon: true,
-          color: true
-        }
-      }
+      category: { select: CATEGORY_SELECT }
     }
   });
 };
