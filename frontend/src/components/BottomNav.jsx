@@ -1,10 +1,11 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ArrowUpDown, Tag, FileSpreadsheet } from "lucide-react";
+import { LayoutDashboard, Landmark, ArrowUpDown, Tag, FileSpreadsheet } from "lucide-react";
 
 export default function BottomNav() {
   const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/accounts", label: "Rekening", icon: Landmark },
     { to: "/transactions", label: "Transaksi", icon: ArrowUpDown },
     { to: "/categories", label: "Kategori", icon: Tag },
     { to: "/reports", label: "Laporan", icon: FileSpreadsheet },

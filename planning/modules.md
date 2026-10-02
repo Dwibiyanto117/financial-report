@@ -84,5 +84,5 @@ Sistem dipecah menjadi 5 modul fungsional utama dan 1 modul utilitas:
 
 | Modul | Deskripsi | Status |
 |-------|-----------|--------|
-| `MOD-07: Account` | Multi rekening (bank, e-wallet, tunai), saldo per rekening, transfer | Proposed |
+| `MOD-07: Account` | Multi rekening (bank, e-wallet, tunai), saldo per rekening, transfer | Implemented |
 | `MOD-08: Statement Import` | Import mutasi CSV/XLSX per rekening, preview, deteksi duplikat, auto-kategori, rollback | Proposed |

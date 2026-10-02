@@ -54,11 +54,18 @@
 
 ---
 
-## Dalam Pengerjaan (In Progress / Next)
-
 ### Batch M7.2: Multi-Account Frontend Integration
-- [ ] API service client untuk `/api/accounts` dan `/api/transfers`.
-- [ ] Halaman Manajemen Rekening (`/accounts`).
-- [ ] Modal Transfer Dana antar rekening.
-- [ ] Selector / filter rekening di Dashboard, Transaksi, dan Laporan.
-- [ ] Field pilihan Rekening saat input/edit transaksi.
+- [x] API service client untuk `/api/accounts` dan `/api/transfers`.
+- [x] Halaman Manajemen Rekening (`/accounts`).
+- [x] Modal Transfer Dana antar rekening (`TransferModal.jsx`).
+- [x] Selector / filter rekening di Dashboard, Transaksi, dan Laporan.
+- [x] Field pilihan Rekening saat input/edit transaksi.
+
+---
+
+## Milestone Selanjutnya (Next: M8 Statement Import)
+
+### Batch M8.1: Statement Import Pipeline Core (Backend)
+- [ ] Model `ImportBatch`, `CategoryRule`, dan kolom `import_fingerprint` di database.
+- [ ] Endpoint `/api/imports/preview`, `/api/imports/:id/commit`, `/api/imports/:id` (rollback).
+- [ ] Parser interface dan engine pendeteksi duplikasi berbasis hash sha256.

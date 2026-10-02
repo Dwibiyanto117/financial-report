@@ -5,25 +5,30 @@ import {
   Search,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRightLeft,
   Edit2,
   Trash2,
   X,
   Loader2,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Landmark
 } from "lucide-react";
 import api from "../services/api";
+import { getAccounts } from "../services/accountService";
 import { formatCurrency } from "../utils/currency";
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 15, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
 
   // Filter States
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [accountFilter, setAccountFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [search, setSearch] = useState("");
@@ -33,6 +38,7 @@ export default function Transactions() {
   const [editingTx, setEditingTx] = useState(null);
   const [modalForm, setModalForm] = useState({
     type: "EXPENSE",
+    accountId: "",
     categoryId: "",
     amount: "",
     transactionDate: new Date().toISOString().split("T")[0],
@@ -50,6 +56,7 @@ export default function Transactions() {
       });
       if (typeFilter) params.append("type", typeFilter);
       if (categoryFilter) params.append("categoryId", categoryFilter);
+      if (accountFilter) params.append("accountId", accountFilter);
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       if (search) params.append("search", search);
@@ -66,30 +73,34 @@ export default function Transactions() {
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchInitialData = async () => {
     try {
-      const res = await api.get("/categories");
-      if (res.data.success) {
-        setCategories(res.data.data);
-      }
+      const [catRes, accRes] = await Promise.all([
+        api.get("/categories"),
+        getAccounts()
+      ]);
+      if (catRes.data.success) setCategories(catRes.data.data);
+      if (accRes.success) setAccounts(accRes.data);
     } catch (err) {
-      console.error("Gagal memuat kategori:", err);
+      console.error("Gagal memuat kategori / rekening:", err);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
     fetchTransactions(1);
-  }, [typeFilter, categoryFilter, startDate, endDate, search]);
+  }, [typeFilter, categoryFilter, accountFilter, startDate, endDate, search]);
 
   const openAddModal = () => {
     setEditingTx(null);
     const defaultCat = categories.find((c) => c.type === "EXPENSE");
+    const activeAccs = accounts.filter((a) => !a.isArchived);
     setModalForm({
       type: "EXPENSE",
+      accountId: activeAccs.length > 0 ? String(activeAccs[0].id) : "",
       categoryId: defaultCat ? defaultCat.id : "",
       amount: "",
       transactionDate: new Date().toISOString().split("T")[0],
@@ -103,7 +114,8 @@ export default function Transactions() {
     setEditingTx(tx);
     setModalForm({
       type: tx.type,
-      categoryId: tx.category.id,
+      accountId: tx.account ? String(tx.account.id) : (accounts[0] ? String(accounts[0].id) : ""),
+      categoryId: tx.category ? tx.category.id : "",
       amount: tx.amount.toString(),
       transactionDate: new Date(tx.transactionDate).toISOString().split("T")[0],
       description: tx.description || ""
@@ -118,10 +130,16 @@ export default function Transactions() {
     setSubmitting(true);
 
     try {
+      const payload = {
+        ...modalForm,
+        accountId: Number(modalForm.accountId),
+        categoryId: modalForm.categoryId ? Number(modalForm.categoryId) : undefined
+      };
+
       if (editingTx) {
-        await api.put(`/transactions/${editingTx.id}`, modalForm);
+        await api.put(`/transactions/${editingTx.id}`, payload);
       } else {
-        await api.post("/transactions", modalForm);
+        await api.post("/transactions", payload);
       }
       setIsModalOpen(false);
       fetchTransactions(pagination.page);
@@ -134,8 +152,12 @@ export default function Transactions() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+  const handleDelete = async (id, isTransfer) => {
+    const msg = isTransfer
+      ? "Transaksi ini merupakan bagian dari transfer berpasangan. Menghapusnya akan membatalkan kedua sisi transfer sekaligus. Lanjutkan?"
+      : "Apakah Anda yakin ingin menghapus transaksi ini?";
+
+    if (window.confirm(msg)) {
       try {
         await api.delete(`/transactions/${id}`);
         fetchTransactions(pagination.page);
@@ -146,6 +168,7 @@ export default function Transactions() {
   };
 
   const availableCategories = categories.filter((c) => c.type === modalForm.type);
+  const activeAccounts = accounts.filter((a) => !a.isArchived);
 
   return (
     <div className="space-y-6 pb-12">
@@ -154,13 +177,13 @@ export default function Transactions() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Riwayat Transaksi</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Daftar seluruh catatan pemasukan dan pengeluaran Anda.
+            Daftar seluruh catatan pemasukan, pengeluaran, dan transfer antar rekening.
           </p>
         </div>
 
         <button
           onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Transaksi</span>
@@ -169,7 +192,7 @@ export default function Transactions() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -178,8 +201,24 @@ export default function Transactions() {
               placeholder="Cari deskripsi..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             />
+          </div>
+
+          {/* Rekening Filter */}
+          <div>
+            <select
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-medium"
+            >
+              <option value="">Semua Rekening</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.institution})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Tipe Filter */}
@@ -187,11 +226,13 @@ export default function Transactions() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">Semua Tipe Transaksi</option>
               <option value="INCOME">Hanya Pemasukan</option>
               <option value="EXPENSE">Hanya Pengeluaran</option>
+              <option value="TRANSFER_IN">Hanya Transfer Masuk</option>
+              <option value="TRANSFER_OUT">Hanya Transfer Keluar</option>
             </select>
           </div>
 
@@ -200,7 +241,7 @@ export default function Transactions() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">Semua Kategori</option>
               {categories.map((c) => (
@@ -212,20 +253,20 @@ export default function Transactions() {
             </select>
           </div>
 
-          {/* Date Filter Quick Reset */}
-          <div className="flex items-center gap-2">
+          {/* Date Filter */}
+          <div className="flex items-center gap-1.5">
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-1/2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none"
+              className="w-1/2 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-hidden"
             />
             <span className="text-slate-400 text-xs">s/d</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-1/2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none"
+              className="w-1/2 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-hidden"
             />
           </div>
         </div>
@@ -249,6 +290,7 @@ export default function Transactions() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     <th className="py-3 px-4">Tanggal</th>
+                    <th className="py-3 px-4">Rekening</th>
                     <th className="py-3 px-4">Tipe</th>
                     <th className="py-3 px-4">Kategori</th>
                     <th className="py-3 px-4">Keterangan</th>
@@ -257,113 +299,180 @@ export default function Transactions() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50 transition">
-                      <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
-                        {new Date(tx.transactionDate).toLocaleDateString("id-ID")}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
-                            tx.type === "INCOME"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-rose-50 text-rose-700"
+                  {transactions.map((tx) => {
+                    const isIncome = tx.type === "INCOME";
+                    const isExpense = tx.type === "EXPENSE";
+                    const isTransferIn = tx.type === "TRANSFER_IN";
+                    const isTransferOut = tx.type === "TRANSFER_OUT";
+                    const isTransfer = isTransferIn || isTransferOut;
+
+                    return (
+                      <tr key={tx.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-xs font-medium">
+                          {new Date(tx.transactionDate).toLocaleDateString("id-ID")}
+                        </td>
+
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white shadow-2xs"
+                            style={{ backgroundColor: tx.account?.color || "#003D79" }}
+                          >
+                            <Landmark className="w-3 h-3" />
+                            <span>{tx.account?.name || "Kas"}</span>
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                              isIncome
+                                ? "bg-emerald-50 text-emerald-700"
+                                : isExpense
+                                ? "bg-rose-50 text-rose-700"
+                                : isTransferIn
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {isIncome
+                              ? "Pemasukan"
+                              : isExpense
+                              ? "Pengeluaran"
+                              : isTransferIn
+                              ? "Transfer Masuk"
+                              : "Transfer Keluar"}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-900 font-medium whitespace-nowrap">
+                          {tx.category ? (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: tx.category?.color || "#10B981" }}
+                              />
+                              <span>{tx.category.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic text-xs flex items-center gap-1">
+                              <ArrowRightLeft className="w-3 h-3" /> Transfer Antar Akun
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                          {tx.description || "-"}
+                        </td>
+
+                        <td
+                          className={`py-3.5 px-4 text-right font-bold whitespace-nowrap ${
+                            isIncome
+                              ? "text-emerald-600"
+                              : isExpense
+                              ? "text-rose-600"
+                              : isTransferIn
+                              ? "text-blue-600"
+                              : "text-amber-600"
                           }`}
                         >
-                          {tx.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-900 font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: tx.category?.color || "#10B981" }}
-                          />
-                          <span>{tx.category?.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
-                        {tx.description || "-"}
-                      </td>
-                      <td
-                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap ${
-                          tx.type === "INCOME" ? "text-emerald-600" : "text-rose-600"
-                        }`}
-                      >
-                        {tx.type === "INCOME" ? "+" : "-"}
-                        {formatCurrency(tx.amount)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => openEditModal(tx)}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition"
-                            title="Ubah transaksi"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(tx.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
-                            title="Hapus transaksi"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          {isIncome ? "+" : isExpense ? "-" : isTransferIn ? "+" : "-"}
+                          {formatCurrency(tx.amount)}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {!isTransfer && (
+                              <button
+                                onClick={() => openEditModal(tx)}
+                                className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition"
+                                title="Ubah transaksi"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(tx.id, isTransfer)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
+                              title={isTransfer ? "Batalkan transfer" : "Hapus transaksi"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Card Feed View */}
             <div className="md:hidden divide-y divide-slate-100 p-2">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        backgroundColor: `${tx.category?.color || "#10B981"}20`,
-                        color: tx.category?.color || "#10B981"
-                      }}
-                    >
-                      {tx.type === "INCOME" ? (
-                        <ArrowUpRight className="w-4 h-4" />
-                      ) : (
-                        <ArrowDownRight className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-800">
-                        {tx.description || tx.category?.name}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {new Date(tx.transactionDate).toLocaleDateString("id-ID")} •{" "}
-                        {tx.category?.name}
-                      </div>
-                    </div>
-                  </div>
+              {transactions.map((tx) => {
+                const isIncome = tx.type === "INCOME";
+                const isExpense = tx.type === "EXPENSE";
+                const isTransferIn = tx.type === "TRANSFER_IN";
+                const isTransferOut = tx.type === "TRANSFER_OUT";
+                const isTransfer = isTransferIn || isTransferOut;
 
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`text-sm font-bold text-right ${
-                        tx.type === "INCOME" ? "text-emerald-600" : "text-rose-600"
-                      }`}
-                    >
-                      {tx.type === "INCOME" ? "+" : "-"}
-                      {formatCurrency(tx.amount)}
+                return (
+                  <div key={tx.id} className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          isIncome
+                            ? "bg-emerald-50 text-emerald-600"
+                            : isExpense
+                            ? "bg-rose-50 text-rose-600"
+                            : "bg-blue-50 text-blue-600"
+                        }`}
+                      >
+                        {isIncome && <ArrowUpRight className="w-4 h-4" />}
+                        {isExpense && <ArrowDownRight className="w-4 h-4" />}
+                        {isTransfer && <ArrowRightLeft className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">
+                          {tx.description || tx.category?.name || (isTransferIn ? "Transfer Masuk" : "Transfer Keluar")}
+                        </div>
+                        <div className="text-xs text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span>{new Date(tx.transactionDate).toLocaleDateString("id-ID")}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-slate-600 bg-slate-100 px-1 rounded">
+                            {tx.account?.name || "Kas"}
+                          </span>
+                          <span>•</span>
+                          <span>{tx.category?.name || "Transfer"}</span>
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => openEditModal(tx)}
-                      className="text-slate-400 hover:text-emerald-600"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`text-sm font-bold text-right ${
+                          isIncome
+                            ? "text-emerald-600"
+                            : isExpense
+                            ? "text-rose-600"
+                            : isTransferIn
+                            ? "text-blue-600"
+                            : "text-amber-600"
+                        }`}
+                      >
+                        {isIncome ? "+" : isExpense ? "-" : isTransferIn ? "+" : "-"}
+                        {formatCurrency(tx.amount)}
+                      </div>
+                      <button
+                        onClick={() => handleDelete(tx.id, isTransfer)}
+                        className="text-slate-400 hover:text-rose-600 p-1"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pagination Controls */}
@@ -416,6 +525,26 @@ export default function Transactions() {
                 </div>
               )}
 
+              {/* Rekening / Sumber Dana */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Rekening / Sumber Dana
+                </label>
+                <select
+                  required
+                  value={modalForm.accountId}
+                  onChange={(e) => setModalForm({ ...modalForm, accountId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">-- Pilih Rekening --</option>
+                  {activeAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.institution}) — Saldo: {formatCurrency(a.currentBalance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Tipe Transaksi (Pemasukan / Pengeluaran Switch) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
@@ -465,7 +594,7 @@ export default function Transactions() {
                   placeholder="Contoh: 50000"
                   value={modalForm.amount}
                   onChange={(e) => setModalForm({ ...modalForm, amount: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-base focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -478,8 +607,9 @@ export default function Transactions() {
                   required
                   value={modalForm.categoryId}
                   onChange={(e) => setModalForm({ ...modalForm, categoryId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 >
+                  <option value="">-- Pilih Kategori --</option>
                   {availableCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -498,7 +628,7 @@ export default function Transactions() {
                   required
                   value={modalForm.transactionDate}
                   onChange={(e) => setModalForm({ ...modalForm, transactionDate: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -512,7 +642,7 @@ export default function Transactions() {
                   placeholder="Contoh: Makan siang di warung"
                   value={modalForm.description}
                   onChange={(e) => setModalForm({ ...modalForm, description: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -527,7 +657,7 @@ export default function Transactions() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition disabled:opacity-50 flex items-center gap-2"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>{editingTx ? "Simpan Perubahan" : "Tambah Transaksi"}</span>

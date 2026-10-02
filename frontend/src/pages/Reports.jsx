@@ -8,9 +8,11 @@ import {
   Loader2,
   TrendingUp,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Landmark
 } from "lucide-react";
 import api from "../services/api";
+import { getAccounts } from "../services/accountService";
 import { formatCurrency } from "../utils/currency";
 
 export default function Reports() {
@@ -20,18 +22,33 @@ export default function Reports() {
   const [endDate, setEndDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split("T")[0]
   );
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  useEffect(() => {
+    async function loadAccounts() {
+      try {
+        const res = await getAccounts();
+        if (res.success) setAccounts(res.data);
+      } catch (err) {
+        console.error("Gagal memuat rekening:", err);
+      }
+    }
+    loadAccounts();
+  }, []);
+
   const fetchReportData = async () => {
     setLoading(true);
     try {
+      const accountParam = selectedAccountId ? `&accountId=${selectedAccountId}` : "";
       const [sumRes, txRes] = await Promise.all([
-        api.get(`/dashboard/summary?startDate=${startDate}&endDate=${endDate}`),
-        api.get(`/transactions?startDate=${startDate}&endDate=${endDate}&limit=100`)
+        api.get(`/dashboard/summary?startDate=${startDate}&endDate=${endDate}${accountParam}`),
+        api.get(`/transactions?startDate=${startDate}&endDate=${endDate}&limit=100${accountParam}`)
       ]);
 
       if (sumRes.data.success) setSummary(sumRes.data.data);
@@ -45,12 +62,13 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReportData();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, selectedAccountId]);
 
   const handleDownloadExcel = async () => {
     setDownloadingExcel(true);
     try {
-      const res = await api.get(`/reports/export/excel?startDate=${startDate}&endDate=${endDate}`, {
+      const accountParam = selectedAccountId ? `&accountId=${selectedAccountId}` : "";
+      const res = await api.get(`/reports/export/excel?startDate=${startDate}&endDate=${endDate}${accountParam}`, {
         responseType: "blob"
       });
 
@@ -75,7 +93,8 @@ export default function Reports() {
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      const res = await api.get(`/reports/export/pdf?startDate=${startDate}&endDate=${endDate}`, {
+      const accountParam = selectedAccountId ? `&accountId=${selectedAccountId}` : "";
+      const res = await api.get(`/reports/export/pdf?startDate=${startDate}&endDate=${endDate}${accountParam}`, {
         responseType: "blob"
       });
 
@@ -109,24 +128,44 @@ export default function Reports() {
 
       {/* Filter & Action Panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          {/* Rentang Periode */}
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-400" />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* Filters: Rekening & Rentang Periode */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Filter Rekening */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
+              <Landmark className="w-4 h-4 text-slate-400" />
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-hidden cursor-pointer"
+              >
+                <option value="">Semua Rekening</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.institution})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Rentang Periode */}
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-slate-400 text-xs">s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400 text-xs">s/d</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
             </div>
           </div>
 
@@ -212,7 +251,7 @@ export default function Reports() {
           </div>
         ) : transactions.length === 0 ? (
           <div className="py-16 text-center text-slate-400 text-sm">
-            Tidak ada transaksi pada rentang tanggal yang dipilih.
+            Tidak ada transaksi pada filter yang dipilih.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -221,6 +260,7 @@ export default function Reports() {
                 <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
                   <th className="py-3 px-4 text-center">No</th>
                   <th className="py-3 px-4">Tanggal</th>
+                  <th className="py-3 px-4">Rekening</th>
                   <th className="py-3 px-4">Tipe</th>
                   <th className="py-3 px-4">Kategori</th>
                   <th className="py-3 px-4">Keterangan</th>
@@ -235,23 +275,44 @@ export default function Reports() {
                       {new Date(tx.transactionDate).toLocaleDateString("id-ID")}
                     </td>
                     <td className="py-2.5 px-4 whitespace-nowrap">
+                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                        {tx.account?.name || "-"}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 whitespace-nowrap">
                       <span
                         className={`font-semibold ${
-                          tx.type === "INCOME" ? "text-emerald-700" : "text-rose-700"
+                          tx.type === "INCOME"
+                            ? "text-emerald-700"
+                            : tx.type === "EXPENSE"
+                            ? "text-rose-700"
+                            : "text-blue-700"
                         }`}
                       >
-                        {tx.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}
+                        {tx.type === "INCOME"
+                          ? "Pemasukan"
+                          : tx.type === "EXPENSE"
+                          ? "Pengeluaran"
+                          : tx.type === "TRANSFER_IN"
+                          ? "Transfer Masuk"
+                          : "Transfer Keluar"}
                       </span>
                     </td>
                     <td className="py-2.5 px-4 font-medium text-slate-800 whitespace-nowrap">
-                      {tx.category?.name}
+                      {tx.category?.name || "Transfer"}
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 max-w-sm truncate">
                       {tx.description || "-"}
                     </td>
                     <td
                       className={`py-2.5 px-4 text-right font-bold whitespace-nowrap ${
-                        tx.type === "INCOME" ? "text-emerald-600" : "text-rose-600"
+                        tx.type === "INCOME"
+                          ? "text-emerald-600"
+                          : tx.type === "EXPENSE"
+                          ? "text-rose-600"
+                          : tx.type === "TRANSFER_IN"
+                          ? "text-blue-600"
+                          : "text-amber-600"
                       }`}
                     >
                       {tx.type === "INCOME" ? "+" : "-"}

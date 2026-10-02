@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
 > **Last Updated:** 2026-10-02
-> **Phase:** Phase 4 — Multi-Account & Transfer Core (Batch M7.1 selesai)
+> **Phase:** Phase 4 — Multi-Account & Transfer Complete (M7 Selesai)
 
 ---
 
@@ -92,4 +92,31 @@ Pondasi backend untuk multi rekening (MOD-07) dan transfer antar rekening selesa
 - Transaksi pemasukan, pengeluaran, dan transfer antar rekening.
 - Verifikasi saldo dinamis masing-masing rekening 100% akurat.
 - Verifikasi dashboard running balance dan laporan arus kas bebas polusi transfer.
-- Verifikasi ekspor Excel & PDF 200 OK.
+- Verifikasi ekspor Excel & PDF 200 OK.
+
+---
+
+## Batch M7.2 — Multi-Account Frontend Integration (2026-10-02)
+
+Antarmuka pengguna (Frontend React) untuk pengelolaan multi rekening dan transfer dana selesai:
+
+- [x] **Service API Client**:
+  - `accountService.js`: pemanggilan endpoint `/api/accounts` (get, create, update, delete).
+  - `transferService.js`: pemanggilan endpoint `/api/transfers` (execute, get, delete).
+- [x] **Halaman Manajemen Rekening (`frontend/src/pages/Accounts.jsx`)**:
+  - Kartu rekening informatif dengan visual warna kustom, badge tipe, nomor akun tersamarkan, dan saldo terhitung.
+  - Kartu agregat: Total Saldo Tergabung, Total Rekening Aktif, Akumulasi Masuk, dan Akumulasi Keluar.
+  - Filter tab: Semua Rekening, Bank, E-Wallet, Kas Tunai, dan Diarsipkan.
+  - Aksi: Edit rekening, Arsipkan/Pulihkan rekening, dan Hapus rekening.
+- [x] **Komponen Modal**:
+  - `AccountModal.jsx`: Tambah dan edit rekening dengan pilihan institusi bank/e-wallet, tipe, saldo awal, dan palet warna.
+  - `TransferModal.jsx`: Form transfer dana antar rekening dengan validasi rekening berbeda, peringatan saldo tidak mencukupi, dan opsi biaya admin.
+- [x] **Navigasi & Routing**:
+  - Penambahan rute `/accounts` di `App.jsx`.
+  - Penambahan menu navigasi "Rekening" di Sidebar desktop dan BottomNav mobile.
+- [x] **Integrasi Antar Halaman**:
+  - **Dashboard (`Dashboard.jsx`)**: Filter dropdown rekening ("Semua Rekening" vs akun spesifik), baris pill saldo cepat per rekening, badge rekening pada transaksi terbaru.
+  - **Transaksi (`Transactions.jsx`)**: Filter rekening pada filter bar, kolom Rekening pada tabel dan card mobile, pilihan Rekening wajib pada modal input/edit transaksi, penanda badge untuk transaksi transfer.
+  - **Laporan (`Reports.jsx`)**: Filter rekening untuk pratinjau tabel serta unduhan file Excel dan PDF.
+- [x] **Verifikasi Bundle**:
+  - `npm run build` sukses 100% tanpa error kompilasi/bundle.

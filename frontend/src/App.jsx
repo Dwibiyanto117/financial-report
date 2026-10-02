@@ -10,6 +10,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
+import Accounts from "./pages/Accounts";
 import Categories from "./pages/Categories";
 import Reports from "./pages/Reports";
 import { Loader2 } from "lucide-react";
@@ -103,6 +104,7 @@ export default function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/accounts" element={<Accounts />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/reports" element={<Reports />} />
