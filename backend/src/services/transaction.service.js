@@ -2,6 +2,7 @@ import prisma from "../config/prisma.js";
 import { parseDateRange, parseDateParam, parseIntParam, parseEnumParam, getParam } from "../utils/query.js";
 
 const TRANSACTION_TYPES = ["INCOME", "EXPENSE"];
+const ALL_TRANSACTION_TYPES = ["INCOME", "EXPENSE", "TRANSFER_IN", "TRANSFER_OUT"];
 
 const CATEGORY_SELECT = {
   id: true,
@@ -11,11 +12,21 @@ const CATEGORY_SELECT = {
   color: true
 };
 
+const ACCOUNT_SELECT = {
+  id: true,
+  name: true,
+  institution: true,
+  type: true,
+  color: true
+};
+
 /**
  * Memastikan kategori yang dipilih benar-benar milik user atau kategori
  * bawaan sistem.
  */
 async function resolveCategory(userId, categoryId) {
+  if (!categoryId) return null;
+
   const category = await prisma.category.findFirst({
     where: {
       id: Number(categoryId),
@@ -36,11 +47,48 @@ async function resolveCategory(userId, categoryId) {
 }
 
 /**
+ * Memastikan rekening valid, milik user, dan tidak diarsipkan.
+ */
+async function resolveAccount(userId, accountId) {
+  if (accountId) {
+    const account = await prisma.account.findFirst({
+      where: { id: Number(accountId), userId }
+    });
+    if (!account) {
+      const error = new Error("Rekening yang dipilih tidak ditemukan");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (account.isArchived) {
+      const error = new Error("Rekening yang dipilih dalam status diarsipkan");
+      error.statusCode = 400;
+      throw error;
+    }
+    return account;
+  }
+
+  // Fallback to first active account
+  const defaultAccount = await prisma.account.findFirst({
+    where: { userId, isArchived: false },
+    orderBy: { id: "asc" }
+  });
+
+  if (!defaultAccount) {
+    const error = new Error("Belum ada rekening aktif. Silakan buat rekening terlebih dahulu.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return defaultAccount;
+}
+
+/**
  * Kategori bertipe INCOME hanya untuk pemasukan, EXPENSE hanya untuk
  * pengeluaran. Tanpa aturan ini saldo berjalan dan grafik komposisi kategori
  * menjadi tidak konsisten dengan tipe transaksinya.
  */
 function assertCategoryMatchesType(category, type) {
+  if (!category) return;
   if (category.type !== type) {
     const error = new Error(
       `Kategori "${category.name}" bertipe ${category.type}, tidak dapat dipakai untuk transaksi ${type}`
@@ -70,11 +118,19 @@ function requireTransactionType(value) {
   return type;
 }
 
-export const createTransaction = async (userId, { categoryId, type, amount, transactionDate, description }) => {
+export const createTransaction = async (userId, { accountId, categoryId, type, amount, transactionDate, description }) => {
   const numAmount = parseAmount(amount);
   const transactionType = requireTransactionType(type);
 
+  const account = await resolveAccount(userId, accountId);
   const category = await resolveCategory(userId, categoryId);
+
+  if (!category) {
+    const error = new Error("Kategori wajib dipilih untuk transaksi pemasukan/pengeluaran");
+    error.statusCode = 400;
+    throw error;
+  }
+
   assertCategoryMatchesType(category, transactionType);
 
   const parsedDate = transactionDate
@@ -84,6 +140,7 @@ export const createTransaction = async (userId, { categoryId, type, amount, tran
   return await prisma.transaction.create({
     data: {
       userId,
+      accountId: account.id,
       categoryId: category.id,
       type: transactionType,
       amount: numAmount,
@@ -92,6 +149,7 @@ export const createTransaction = async (userId, { categoryId, type, amount, tran
       description: description ? String(description).trim() : null
     },
     include: {
+      account: { select: ACCOUNT_SELECT },
       category: { select: CATEGORY_SELECT }
     }
   });
@@ -104,7 +162,7 @@ export const getTransactions = async (userId, query = {}) => {
 
   const whereClause = { userId };
 
-  const typeFilter = parseEnumParam(getParam(query, "type"), "tipe transaksi", TRANSACTION_TYPES);
+  const typeFilter = parseEnumParam(getParam(query, "type"), "tipe transaksi", ALL_TRANSACTION_TYPES);
   if (typeFilter) {
     whereClause.type = typeFilter;
   }
@@ -115,6 +173,14 @@ export const getTransactions = async (userId, query = {}) => {
   });
   if (categoryId !== null) {
     whereClause.categoryId = categoryId;
+  }
+
+  const accountId = parseIntParam(getParam(query, "accountId", "account_id"), "rekening", {
+    strict: true,
+    min: 1
+  });
+  if (accountId !== null) {
+    whereClause.accountId = accountId;
   }
 
   const { startDate, endDate } = parseDateRange(query);
@@ -140,6 +206,7 @@ export const getTransactions = async (userId, query = {}) => {
         { id: "desc" }
       ],
       include: {
+        account: { select: ACCOUNT_SELECT },
         category: { select: CATEGORY_SELECT }
       }
     })
@@ -163,6 +230,7 @@ export const getTransactionById = async (userId, id) => {
       userId
     },
     include: {
+      account: { select: ACCOUNT_SELECT },
       category: true
     }
   });
@@ -185,24 +253,37 @@ export const updateTransaction = async (userId, id, data) => {
     updatePayload.amount = parseAmount(data.amount);
   }
 
+  if (data.accountId !== undefined) {
+    const account = await resolveAccount(userId, data.accountId);
+    updatePayload.accountId = account.id;
+  }
+
   if (data.type !== undefined) {
+    // If it was a transfer, do not allow changing type directly to income/expense
+    if (existing.transferGroupId) {
+      const error = new Error("Tipe transaksi transfer tidak dapat diubah langsung. Silakan hapus transfer jika ingin membatalkan.");
+      error.statusCode = 400;
+      throw error;
+    }
     updatePayload.type = requireTransactionType(data.type);
   }
 
   if (data.categoryId !== undefined) {
     const category = await resolveCategory(userId, data.categoryId);
-    updatePayload.categoryId = category.id;
+    updatePayload.categoryId = category ? category.id : null;
   }
 
   // Konsistensi kategori dan tipe diperiksa terhadap nilai akhir transaksi,
-  // sehingga mengubah salah satu saja tetap menghasilkan data yang sah.
+  // jika bukan transfer
   const nextType = updatePayload.type ?? existing.type;
-  const nextCategory = updatePayload.categoryId !== undefined
-    ? await prisma.category.findUnique({ where: { id: updatePayload.categoryId } })
-    : existing.category;
+  if (nextType === "INCOME" || nextType === "EXPENSE") {
+    const nextCategory = updatePayload.categoryId !== undefined
+      ? await prisma.category.findUnique({ where: { id: updatePayload.categoryId } })
+      : existing.category;
 
-  if (nextCategory) {
-    assertCategoryMatchesType(nextCategory, nextType);
+    if (nextCategory) {
+      assertCategoryMatchesType(nextCategory, nextType);
+    }
   }
 
   if (data.transactionDate !== undefined) {
@@ -217,6 +298,7 @@ export const updateTransaction = async (userId, id, data) => {
     where: { id: existing.id },
     data: updatePayload,
     include: {
+      account: { select: ACCOUNT_SELECT },
       category: { select: CATEGORY_SELECT }
     }
   });
@@ -224,6 +306,14 @@ export const updateTransaction = async (userId, id, data) => {
 
 export const deleteTransaction = async (userId, id) => {
   const existing = await getTransactionById(userId, id);
+
+  // Jika transaksi merupakan bagian dari transfer berpasangan, hapus kedua sisi
+  if (existing.transferGroupId) {
+    await prisma.transaction.deleteMany({
+      where: { transferGroupId: existing.transferGroupId, userId }
+    });
+    return { success: true, message: "Kedua sisi transaksi transfer berhasil dihapus" };
+  }
 
   await prisma.transaction.delete({
     where: { id: existing.id }

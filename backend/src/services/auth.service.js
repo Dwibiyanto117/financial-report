@@ -29,7 +29,16 @@ export const register = async ({ name, email, password }) => {
     data: {
       name: name.trim(),
       email: normalizedEmail,
-      passwordHash
+      passwordHash,
+      accounts: {
+        create: {
+          name: "Kas Utama",
+          institution: "CASH",
+          type: "CASH",
+          openingBalance: 0,
+          color: "#10B981"
+        }
+      }
     },
     select: {
       id: true,

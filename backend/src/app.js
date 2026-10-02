@@ -4,6 +4,8 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 
 import authRoutes from "./routes/auth.routes.js";
+import accountRoutes from "./routes/account.routes.js";
+import transferRoutes from "./routes/transfer.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
@@ -33,6 +35,8 @@ app.get("/api/health", (req, res) => {
 
 // Mount Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/accounts", accountRoutes);
+app.use("/api/transfers", transferRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/dashboard", dashboardRoutes);

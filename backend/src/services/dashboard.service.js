@@ -45,21 +45,74 @@ function buildDateFilter({ startDate, endDate }) {
 }
 
 export const getSummary = async (userId, query = {}) => {
-  // 1. Kalkulasi Running Balance (sepanjang masa)
-  const [allIncome, allExpense] = await Promise.all([
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { userId, type: "INCOME" }
-    }),
-    prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { userId, type: "EXPENSE" }
-    })
-  ]);
+  const accountId = parseIntParam(getParam(query, "accountId", "account_id"), "rekening", { strict: true, min: 1 });
 
-  const totalAllTimeIncome = Number(allIncome._sum.amount || 0);
-  const totalAllTimeExpense = Number(allExpense._sum.amount || 0);
-  const runningBalance = totalAllTimeIncome - totalAllTimeExpense;
+  const whereBase = { userId };
+  if (accountId !== null) {
+    whereBase.accountId = accountId;
+  }
+
+  // 1. Kalkulasi Running Balance (sepanjang masa)
+  let runningBalance = 0;
+  if (accountId !== null) {
+    const account = await prisma.account.findFirst({
+      where: { id: accountId, userId }
+    });
+    if (!account) {
+      const error = new Error("Rekening tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const [incomeAgg, expenseAgg, transferInAgg, transferOutAgg] = await Promise.all([
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, accountId, type: "INCOME" }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, accountId, type: "EXPENSE" }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, accountId, type: "TRANSFER_IN" }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, accountId, type: "TRANSFER_OUT" }
+      })
+    ]);
+
+    const opening = Number(account.openingBalance);
+    const inc = Number(incomeAgg._sum.amount || 0);
+    const exp = Number(expenseAgg._sum.amount || 0);
+    const tin = Number(transferInAgg._sum.amount || 0);
+    const tout = Number(transferOutAgg._sum.amount || 0);
+
+    runningBalance = opening + inc - exp + tin - tout;
+  } else {
+    const [accounts, allIncome, allExpense] = await Promise.all([
+      prisma.account.findMany({
+        where: { userId, isArchived: false },
+        select: { openingBalance: true }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, type: "INCOME" }
+      }),
+      prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { userId, type: "EXPENSE" }
+      })
+    ]);
+
+    const totalOpening = accounts.reduce((acc, a) => acc + Number(a.openingBalance), 0);
+    const totalAllTimeIncome = Number(allIncome._sum.amount || 0);
+    const totalAllTimeExpense = Number(allExpense._sum.amount || 0);
+
+    // Antar rekening internal transfer_in dan transfer_out bernilai sama saling menghapus
+    runningBalance = totalOpening + totalAllTimeIncome - totalAllTimeExpense;
+  }
 
   // 2. Kalkulasi Metrik Periode Tertentu
   const period = resolvePeriod(query);
@@ -69,7 +122,7 @@ export const getSummary = async (userId, query = {}) => {
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: {
-        userId,
+        ...whereBase,
         type: "INCOME",
         transactionDate: periodDateFilter
       }
@@ -77,14 +130,14 @@ export const getSummary = async (userId, query = {}) => {
     prisma.transaction.aggregate({
       _sum: { amount: true },
       where: {
-        userId,
+        ...whereBase,
         type: "EXPENSE",
         transactionDate: periodDateFilter
       }
     }),
     prisma.transaction.count({
       where: {
-        userId,
+        ...whereBase,
         transactionDate: periodDateFilter
       }
     })
@@ -96,6 +149,7 @@ export const getSummary = async (userId, query = {}) => {
 
   return {
     runningBalance,
+    accountId: accountId ?? null,
     period: {
       startDate: period.startDate ? period.startDate.toISOString().split("T")[0] : null,
       endDate: period.endDate ? period.endDate.toISOString().split("T")[0] : null,
@@ -110,16 +164,21 @@ export const getSummary = async (userId, query = {}) => {
 
 export const getCategoryBreakdown = async (userId, query = {}) => {
   const type = getParam(query, "type")?.toUpperCase() === "INCOME" ? "INCOME" : "EXPENSE";
+  const accountId = parseIntParam(getParam(query, "accountId", "account_id"), "rekening", { strict: true, min: 1 });
 
-  const periodDateFilter = buildDateFilter(resolvePeriod(query));
+  const whereClause = {
+    userId,
+    type,
+    transactionDate: buildDateFilter(resolvePeriod(query))
+  };
+
+  if (accountId !== null) {
+    whereClause.accountId = accountId;
+  }
 
   // Query transaksi dalam periode dengan kategorinya
   const transactions = await prisma.transaction.findMany({
-    where: {
-      userId,
-      type,
-      transactionDate: periodDateFilter
-    },
+    where: whereClause,
     include: {
       category: {
         select: {
@@ -136,6 +195,8 @@ export const getCategoryBreakdown = async (userId, query = {}) => {
   let totalAmount = 0;
 
   for (const t of transactions) {
+    if (!t.category) continue; // ignore transactions without category
+
     const amount = Number(t.amount);
     totalAmount += amount;
 
@@ -166,6 +227,7 @@ export const getCategoryBreakdown = async (userId, query = {}) => {
 
   return {
     type,
+    accountId: accountId ?? null,
     totalAmount,
     items
   };
@@ -174,18 +236,26 @@ export const getCategoryBreakdown = async (userId, query = {}) => {
 export const getMonthlyTrend = async (userId, query = {}) => {
   const currentYear = new Date().getFullYear();
   const year = parseIntParam(getParam(query, "year"), "tahun", { strict: true, min: 1970, max: 9999 }) ?? currentYear;
+  const accountId = parseIntParam(getParam(query, "accountId", "account_id"), "rekening", { strict: true, min: 1 });
 
   const startOfYear = new Date(year, 0, 1);
   const endOfYear = new Date(year, 11, 31, 23, 59, 59);
 
+  const whereClause = {
+    userId,
+    type: { in: ["INCOME", "EXPENSE"] },
+    transactionDate: {
+      gte: startOfYear,
+      lte: endOfYear
+    }
+  };
+
+  if (accountId !== null) {
+    whereClause.accountId = accountId;
+  }
+
   const transactions = await prisma.transaction.findMany({
-    where: {
-      userId,
-      transactionDate: {
-        gte: startOfYear,
-        lte: endOfYear
-      }
-    },
+    where: whereClause,
     select: {
       type: true,
       amount: true,
@@ -207,7 +277,7 @@ export const getMonthlyTrend = async (userId, query = {}) => {
 
     if (t.type === "INCOME") {
       trend[month].income += amount;
-    } else {
+    } else if (t.type === "EXPENSE") {
       trend[month].expense += amount;
     }
   }
@@ -218,6 +288,7 @@ export const getMonthlyTrend = async (userId, query = {}) => {
 
   return {
     year,
+    accountId: accountId ?? null,
     trend
   };
 };

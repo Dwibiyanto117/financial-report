@@ -2,8 +2,9 @@ import * as transactionService from "../services/transaction.service.js";
 
 export const createTransaction = async (req, res, next) => {
   try {
-    const { categoryId, type, amount, transactionDate, description } = req.body;
+    const { accountId, account_id, categoryId, type, amount, transactionDate, description } = req.body;
     const result = await transactionService.createTransaction(req.user.id, {
+      accountId: accountId ?? account_id,
       categoryId,
       type,
       amount,

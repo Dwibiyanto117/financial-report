@@ -13,6 +13,14 @@ generator client {
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum AccountType {
+  BANK
+  EWALLET
+  CASH
 }
 
 model User {
@@ -27,9 +35,31 @@ model User {
 
   // Relasi
   categories              Category[]
+  accounts                Account[]
   transactions            Transaction[]
 
   @@map("users")
+}
+
+model Account {
+  id               Int           @id @default(autoincrement())
+  userId           Int           @map("user_id")
+  name             String        @db.VarChar(100)
+  institution      String        @default("LAINNYA") @db.VarChar(50)
+  type             AccountType   @default(BANK)
+  accountNoMasked  String?       @map("account_no_masked") @db.VarChar(30)
+  openingBalance   Decimal       @default(0.00) @map("opening_balance") @db.Decimal(15, 2)
+  color            String        @default("#10B981") @db.VarChar(20)
+  isArchived       Boolean       @default(false) @map("is_archived")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  // Relasi
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+
+  @@index([userId, institution])
+  @@map("accounts")
 }
 
 model Category {
@@ -54,20 +84,25 @@ model Category {
 model Transaction {
   id              Int              @id @default(autoincrement())
   userId          Int              @map("user_id")
-  categoryId      Int              @map("category_id")
+  accountId       Int              @map("account_id")
+  categoryId      Int?             @map("category_id")
   type            TransactionType
   amount          Decimal          @db.Decimal(15, 2)
   currency        String           @default("IDR") @db.VarChar(10)
   transactionDate DateTime         @map("transaction_date") @db.Date
   description     String?          @db.VarChar(255)
+  transferGroupId String?          @map("transfer_group_id") @db.VarChar(36)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
   // Relasi
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account         Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@index([userId, transactionDate])
   @@index([userId, categoryId])
+  @@index([userId, accountId])
+  @@index([transferGroupId])
   @@map("transactions")
 }

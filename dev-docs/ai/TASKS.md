@@ -38,3 +38,27 @@
 - [x] Halaman Dashboard dengan Chart interaktif (Recharts).
 - [x] Halaman Riwayat Transaksi + Modal Add/Edit Transaksi.
 - [x] Halaman Kategori & Ekspor Laporan.
+
+### Batch B1: API Contract Normalisation & Validation
+- [x] Normalisasi parameter query (`query.js` helper).
+- [x] Validasi input tanggal ISO 8601 & penolakan format ambigu.
+- [x] Validasi kategori terhadap tipe transaksi.
+
+### Batch M7.1: Multi-Account Core & Transfer Engine (Backend)
+- [x] Skema Prisma `Account`, `AccountType`, dan relasi `Transaction`.
+- [x] Sinkronisasi MySQL & migrasi rekening default "Kas Utama".
+- [x] CRUD API Rekening (`/api/accounts`) dengan kalkulasi saldo dinamis.
+- [x] Atomic Transfer API (`/api/transfers`) & rollback support.
+- [x] Penyesuaian Dashboard, Transaksi, dan Ekspor dengan perlindungan regresi transfer.
+- [x] Verifikasi end-to-end API M7.1.
+
+---
+
+## Dalam Pengerjaan (In Progress / Next)
+
+### Batch M7.2: Multi-Account Frontend Integration
+- [ ] API service client untuk `/api/accounts` dan `/api/transfers`.
+- [ ] Halaman Manajemen Rekening (`/accounts`).
+- [ ] Modal Transfer Dana antar rekening.
+- [ ] Selector / filter rekening di Dashboard, Transaksi, dan Laporan.
+- [ ] Field pilihan Rekening saat input/edit transaksi.

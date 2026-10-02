@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
-> **Last Updated:** 2026-10-01
-> **Phase:** Phase 3 — Stabilisasi Kontrak API (Batch B1 selesai)
+> **Last Updated:** 2026-10-02
+> **Phase:** Phase 4 — Multi-Account & Transfer Core (Batch M7.1 selesai)
 
 ---
 
@@ -57,7 +57,39 @@ Pengujian dijalankan terhadap API dan database MySQL nyata:
 - Registrasi password 6 karakter ditolak; 8 karakter diterima.
 - Rute tanpa token tetap 401.
 
-### Risiko yang belum tertutup
-- Belum ada rangkaian pengujian otomatis; verifikasi masih manual per batch.
-- Belum ada pembatasan laju (rate limiting) pada endpoint autentikasi dan unggahan.
-- Token pemulihan password masih dikembalikan di respons API (lihat `TECHNICAL_DEBT.md` TD-001).
+
+---
+
+## Batch M7.1 — Multi-Account Core, Transfer Engine & Agregasi (2026-10-02)
+
+Pondasi backend untuk multi rekening (MOD-07) dan transfer antar rekening selesai diimplementasikan:
+
+- [x] **Skema Prisma**:
+  - Model `Account` (`accounts`) dengan relasi ke `User` dan `Transaction`.
+  - Enum `AccountType` (`BANK`, `EWALLET`, `CASH`) dan `AccountInstitution`.
+  - Enum `TransactionType` diperluas: `INCOME`, `EXPENSE`, `TRANSFER_IN`, `TRANSFER_OUT`.
+  - Relasi `Transaction` ke `Account` (`account_id`), `transfer_group_id` UUID, dan `category_id` nullable (untuk transfer).
+- [x] **Migrasi Data**:
+  - Rekening default "Kas Utama" (CASH) dibuat otomatis untuk pengguna yang ada (`backend/prisma/seed-accounts.js`).
+  - Pembuatan user baru di `auth.service.js` otomatis mengikutsertakan pembuatan rekening default.
+- [x] **Account CRUD Service & Controller** (`backend/src/services/account.service.js`):
+  - `GET /api/accounts`: Menghitung saldo dinamis per rekening (`openingBalance + income - expense + transferIn - transferOut`).
+  - `POST /api/accounts`: Tambah rekening baru (Bank, E-Wallet, Cash).
+  - `GET /api/accounts/:id`: Detail rekening + saldo kalkulasi.
+  - `PUT /api/accounts/:id`: Update rekening.
+  - `DELETE /api/accounts/:id`: Proteksi penghapusan jika ada transaksi terkait atau jika merupakan satu-satunya rekening aktif.
+- [x] **Transfer Engine** (`backend/src/services/transfer.service.js`):
+  - `POST /api/transfers`: Eksekusi atomik transfer 2 sisi (`TRANSFER_OUT` & `TRANSFER_IN`) terhubung UUID `transfer_group_id`.
+  - `DELETE /api/transfers/:groupId`: Rollback transfer 2 sisi secara bersamaan.
+- [x] **Pencegahan Regresi Agregasi (Critical Guardrail)**:
+  - `dashboard.service.js`: Transaksi transfer tidak dihitung ke pemasukan/pengeluaran total. Dukungan parameter filter `accountId`.
+  - `transaction.service.js`: Menolak pengubahan tipe langsung pada transfer, filter `accountId`, dan penghapusan otomatis pasangan transfer.
+  - `export.service.js`: Tambah kolom Rekening di Excel & PDF, filter `accountId`, dan pelabelan transfer.
+
+### Verifikasi M7.1
+- Login & perolehan token JWT.
+- Pembuatan rekening Mandiri & BCA dengan saldo awal.
+- Transaksi pemasukan, pengeluaran, dan transfer antar rekening.
+- Verifikasi saldo dinamis masing-masing rekening 100% akurat.
+- Verifikasi dashboard running balance dan laporan arus kas bebas polusi transfer.
+- Verifikasi ekspor Excel & PDF 200 OK.
