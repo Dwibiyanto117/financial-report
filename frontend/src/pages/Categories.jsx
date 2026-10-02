@@ -227,110 +227,118 @@ export default function Categories() {
 
       {/* Modal Add / Edit Category */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="font-bold text-slate-900 text-base">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 transition-opacity">
+          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200">
+            {/* Mobile Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 shrink-0 bg-white">
+              <h2 className="font-bold text-slate-800 text-base sm:text-lg">
                 {editingCat ? "Ubah Kategori Kustom" : "Tambah Kategori Kustom"}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleModalSubmit} className="p-6 space-y-4">
-              {modalError && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-lg text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <span>{modalError}</span>
-                </div>
-              )}
+            {/* Modal Form */}
+            <form onSubmit={handleModalSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain">
+                {modalError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{modalError}</span>
+                  </div>
+                )}
 
-              {/* Tipe Kategori */}
-              {!editingCat && (
+                {/* Tipe Kategori */}
+                {!editingCat && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                      Tipe Kategori
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setModalForm({ ...modalForm, type: "EXPENSE", color: "#EF4444" })}
+                        className={`py-2.5 text-xs sm:text-sm font-bold rounded-xl border transition ${
+                          modalForm.type === "EXPENSE"
+                            ? "bg-rose-50 border-rose-300 text-rose-700 shadow-xs"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        Pengeluaran
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalForm({ ...modalForm, type: "INCOME", color: "#10B981" })}
+                        className={`py-2.5 text-xs sm:text-sm font-bold rounded-xl border transition ${
+                          modalForm.type === "INCOME"
+                            ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-xs"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        Pemasukan
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nama Kategori */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    Tipe Kategori
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nama Kategori
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalForm({ ...modalForm, type: "EXPENSE", color: "#EF4444" })}
-                      className={`py-2 text-xs font-bold rounded-lg border transition ${
-                        modalForm.type === "EXPENSE"
-                          ? "bg-rose-50 border-rose-300 text-rose-700 shadow-xs"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Pengeluaran
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModalForm({ ...modalForm, type: "INCOME", color: "#10B981" })}
-                      className={`py-2 text-xs font-bold rounded-lg border transition ${
-                        modalForm.type === "INCOME"
-                          ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-xs"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Pemasukan
-                    </button>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Belanja Online, Hobi"
+                    value={modalForm.name}
+                    onChange={(e) => setModalForm({ ...modalForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                  />
+                </div>
+
+                {/* Pilihan Warna */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Warna Kategori
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_COLORS.map((clr) => (
+                      <button
+                        key={clr}
+                        type="button"
+                        onClick={() => setModalForm({ ...modalForm, color: clr })}
+                        className="w-7 h-7 rounded-full flex items-center justify-center transition hover:scale-110"
+                        style={{ backgroundColor: clr }}
+                      >
+                        {modalForm.color === clr && <Check className="w-4 h-4 text-white stroke-[3]" />}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-
-              {/* Nama Kategori */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Nama Kategori
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Belanja Online, Hobi"
-                  value={modalForm.name}
-                  onChange={(e) => setModalForm({ ...modalForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
               </div>
 
-              {/* Pilihan Warna */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Warna Kategori
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {PRESET_COLORS.map((clr) => (
-                    <button
-                      key={clr}
-                      type="button"
-                      onClick={() => setModalForm({ ...modalForm, color: clr })}
-                      className="w-7 h-7 rounded-full flex items-center justify-center transition hover:scale-110"
-                      style={{ backgroundColor: clr }}
-                    >
-                      {modalForm.color === clr && <Check className="w-4 h-4 text-white stroke-[3]" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Sticky Footer */}
+              <div className="px-5 sm:px-6 py-3.5 sm:py-4 bg-slate-50 border-t border-slate-100 shrink-0 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition"
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs sm:text-sm font-semibold hover:bg-white transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition disabled:opacity-50 flex items-center gap-2"
                 >
-                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>{editingCat ? "Simpan Perubahan" : "Tambah Kategori"}</span>
                 </button>
               </div>
