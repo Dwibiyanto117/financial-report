@@ -83,7 +83,9 @@ backend/
 | Module | Deskripsi | Status |
 |--------|-----------|--------|
 | Auth | Registrasi, login, reset password token | Production |
+| Accounts | Manajemen rekening/sumber dana, saldo terhitung, arsip | Production |
+| Transfers | Transfer dana atomik 2-arah antar-rekening via transferGroupId | Production |
 | Categories | Default & custom categories | Production |
-| Transactions | CRUD transaksi keuangan | Production |
-| Dashboard | Agregasi saldo, komposisi & tren | Production |
-| Reports | Generator ekspor Excel & PDF | Production |
+| Transactions | CRUD transaksi keuangan & filter per-rekening | Production |
+| Dashboard | Agregasi saldo multi-rekening, komposisi & tren | Production |
+| Reports | Generator ekspor Excel & PDF dengan kolom Rekening | Production |

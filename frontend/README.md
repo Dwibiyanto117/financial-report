@@ -48,7 +48,9 @@ npm run dev
 | Module | Deskripsi | Status |
 |--------|-----------|--------|
 | Auth | Login, Register, Forgot Password, Reset Password | Production |
-| Dashboard | Summary Cards, Donut Chart, Trend Bar Chart, Recent Activity | Production |
-| Transactions | Filter Bar, Desktop Table, Mobile Feed, Modal CRUD | Production |
+| Dashboard | Summary Cards, Donut Chart, Trend Bar Chart, Quick Account Balance Pills | Production |
+| Accounts | Card grid sumber dana, saldo, rincian arus kas, modal tambah/edit rekening | Production |
+| Transfers | Modal transfer antar rekening, validasi saldo sumber, biaya admin opsional | Production |
+| Transactions | Filter Bar per rekening, Desktop Table, Mobile Feed, Modal CRUD, Rupiah input | Production |
 | Categories | Default & Custom Categories Management with Color Picker | Production |
-| Reports | Period Filter, Preview, Excel (.xlsx) & PDF (.pdf) Download | Production |
+| Reports | Period & Account Filter, Preview, Excel (.xlsx) & PDF (.pdf) Download | Production |

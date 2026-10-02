@@ -4,18 +4,21 @@ Aplikasi pencatatan keuangan personal berbasis web responsif yang memberikan kem
 
 ---
 
-## Fitur Utama (MVP)
+## Fitur Utama
 - **Autentikasi & Akun**: Registrasi, login dengan JWT, dan reset password dengan verifikasi kode pemulihan sederhana.
+- **Multi-Rekening & Dompet Digital**: Pengelolaan berbagai sumber dana (Bank Mandiri, BCA, BRI, BNI, BSI, GoPay, OVO, DANA, ShopeePay, Kas Tunai) dengan saldo independen dan kustomisasi warna kartu.
+- **Transfer Antar Rekening**: Pemindahan saldo atomik 2-arah (`TRANSFER_OUT` dan `TRANSFER_IN` via `transferGroupId`) dengan validasi kecukupan saldo dan pencatatan biaya admin terpisah tanpa mencemari grafik pengeluaran/pemasukan.
 - **Kategori Transaksi**: Kategori bawaan sistem (15 kategori) dan pembuatan kategori kustom (nama, tipe, ikon, warna).
-- **Pencatatan Transaksi**: CRUD pemasukan dan pengeluaran, format mata uang Rupiah, pencarian catatan, dan filter multi-kriteria (rentang tanggal, tipe, kategori).
+- **Pencatatan Transaksi**: CRUD transaksi pemasukan dan pengeluaran dengan pemilihan rekening sumber dana, format pengetikan Rupiah otomatis (`.` dan `,00`), pencarian catatan, dan filter multi-kriteria.
 - **Dashboard Analitik**:
-  - Saldo Berjalan (Running Balance) akumulasi sepanjang masa.
+  - Saldo Berjalan (Running Balance) akumulasi semua rekening atau per rekening tertentu.
   - Ringkasan pemasukan, pengeluaran, dan selisih bersih (net) periode aktif.
   - Grafik Donut komposisi pengeluaran per kategori.
   - Grafik Batang perbandingan tren arus kas 12 bulan.
 - **Ekspor Laporan**:
-  - Unduh berkas spreadsheet **Excel (.xlsx)** terformat rapi dengan kalkulasi total.
-  - Unduh berkas dokumen **PDF (.pdf)** siap cetak lengkap dengan ringkasan visual.
+  - Unduh berkas spreadsheet **Excel (.xlsx)** terformat rapi dengan kolom Rekening dan kalkulasi total.
+  - Unduh berkas dokumen **PDF (.pdf)** siap cetak lengkap dengan ringkasan visual per periode.
+- **Mobile-First UX**: Modal dialog otomatis bertransformasi menjadi *bottom-sheet* dengan scroll body mandiri dan sticky buttons saat dibuka di smartphone.
 
 ---
 
