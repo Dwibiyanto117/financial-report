@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, AlertCircle, ArrowRightLeft, AlertTriangle } from "lucide-react";
 import { executeTransfer } from "../services/transferService";
 import { formatCurrency } from "../utils/currency";
+import RupiahInput from "./RupiahInput";
 
 export default function TransferModal({ isOpen, onClose, onSuccess, accounts = [] }) {
   const activeAccounts = accounts.filter((a) => !a.isArchived);
@@ -169,21 +170,15 @@ export default function TransferModal({ isOpen, onClose, onSuccess, accounts = [
             {/* Nominal Transfer */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Nominal Transfer
+                Nominal Transfer (IDR)
               </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2.5 text-slate-400 text-sm font-semibold">Rp</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="any"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                  required
-                />
-              </div>
+              <RupiahInput
+                required
+                focusColor="blue"
+                value={amount}
+                onChange={(val) => setAmount(val)}
+                placeholder="0,00"
+              />
               {isInsufficient && (
                 <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1 font-medium">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -211,18 +206,13 @@ export default function TransferModal({ isOpen, onClose, onSuccess, accounts = [
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Biaya Admin (Opsional)
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-slate-400 text-xs font-semibold">Rp</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    placeholder="0"
-                    value={adminFee}
-                    onChange={(e) => setAdminFee(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                  />
-                </div>
+                <RupiahInput
+                  focusColor="blue"
+                  allowZero={true}
+                  value={adminFee}
+                  onChange={(val) => setAdminFee(val)}
+                  placeholder="0,00"
+                />
               </div>
             </div>
 

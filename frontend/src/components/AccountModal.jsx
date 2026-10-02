@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2, AlertCircle, Landmark, Wallet, Banknote } from "lucide-react";
 import { createAccount, updateAccount } from "../services/accountService";
+import RupiahInput from "./RupiahInput";
 
 const INSTITUTIONS = [
   { value: "MANDIRI", label: "Bank Mandiri" },
@@ -217,18 +218,12 @@ export default function AccountModal({ isOpen, onClose, onSuccess, editingAccoun
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Saldo Awal (Opening Balance)
               </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2.5 text-slate-400 text-sm font-semibold">Rp</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  placeholder="0"
-                  value={form.openingBalance}
-                  onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                />
-              </div>
+              <RupiahInput
+                allowZero={true}
+                value={form.openingBalance}
+                onChange={(val) => setForm({ ...form, openingBalance: val })}
+                placeholder="0,00"
+              />
               <p className="text-[11px] text-slate-400 mt-1">
                 Saldo awal saat akun ini mulai dicatat di sistem.
               </p>

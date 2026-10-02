@@ -17,6 +17,7 @@ import {
 import api from "../services/api";
 import { getAccounts } from "../services/accountService";
 import { formatCurrency } from "../utils/currency";
+import RupiahInput from "../components/RupiahInput";
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -593,14 +594,11 @@ export default function Transactions() {
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Nominal (IDR)
                   </label>
-                  <input
-                    type="number"
+                  <RupiahInput
                     required
-                    min="1"
-                    placeholder="Contoh: 50000"
                     value={modalForm.amount}
-                    onChange={(e) => setModalForm({ ...modalForm, amount: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold text-base focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    onChange={(val) => setModalForm({ ...modalForm, amount: val })}
+                    placeholder="0,00"
                   />
                 </div>
 
