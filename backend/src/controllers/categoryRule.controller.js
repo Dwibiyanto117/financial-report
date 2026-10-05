@@ -73,3 +73,32 @@ export const deleteCategoryRule = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * PUT /api/category-rules/:id
+ * Memperbarui aturan kategori pengguna.
+ */
+export const updateCategoryRule = async (req, res, next) => {
+  try {
+    const ruleId = parsePositiveInt(req.params.id, "ID aturan kategori");
+    const { keyword } = req.body;
+    const rawCatId = req.body.category_id || req.body.categoryId;
+    let categoryId = undefined;
+    if (rawCatId !== undefined && rawCatId !== null && String(rawCatId).trim() !== "") {
+      categoryId = parsePositiveInt(rawCatId, "category_id");
+    }
+
+    const updated = await categoryRuleService.updateCategoryRule(req.user.id, ruleId, {
+      keyword,
+      categoryId
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Aturan kategori berhasil diperbarui",
+      data: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};

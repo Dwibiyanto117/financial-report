@@ -16,9 +16,11 @@ import {
   loadCategoriesForUser,
   loadUserCategoryRules,
   suggestCategoryId,
-  findFallbackCategory
+  findFallbackCategory,
+  deriveKeyword
 } from "./categorizer.js";
 import { parsePositiveInt } from "../../utils/query.js";
+import { sanitizeCell } from "./normalize.js";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_ROWS = 2000;
@@ -182,6 +184,8 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       categories
     });
 
+    const suggestedKeyword = deriveKeyword(rawRow.description);
+
     processedRows.push({
       index: rawRow.index,
       date: dateStr,
@@ -192,6 +196,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       balance: rawRow.balance !== undefined ? rawRow.balance : null,
       fingerprint,
       suggested_category_id: suggestedCategoryId,
+      suggested_keyword: suggestedKeyword,
       is_duplicate: isDuplicate
     });
   }
@@ -282,6 +287,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       amount: r.amount,
       balance: r.balance,
       suggested_category_id: r.suggested_category_id,
+      suggested_keyword: r.suggested_keyword,
       is_duplicate: r.is_duplicate
     }))
   };
@@ -339,6 +345,7 @@ export async function commit({ userId, batchId, rows = [] }) {
       const transactionsToInsert = [];
       let skippedCount = 0;
       let previewDupNotAttempted = 0;
+      const rulesToProcess = [];
 
       for (const r of payloadRows) {
         const override = overrideMap.get(r.index);
@@ -366,6 +373,20 @@ export async function commit({ userId, batchId, rows = [] }) {
         if (!matchedCategory || matchedCategory.type !== r.type) {
           const fallback = findFallbackCategory(categories, r.type);
           catId = fallback ? fallback.id : null;
+          matchedCategory = fallback;
+        }
+
+        // Kumpulkan permintaan belajar aturan kategori jika opt-in
+        if (override && override.learn_rule === true && matchedCategory) {
+          const rawKw = override.keyword !== undefined && override.keyword !== null
+            ? String(override.keyword).trim()
+            : (r.suggested_keyword ? String(r.suggested_keyword).trim() : "");
+
+          rulesToProcess.push({
+            index: r.index,
+            keyword: rawKw,
+            categoryId: matchedCategory.id
+          });
         }
 
         // Potong deskripsi maksimal 255 karakter sebelum disimpan
@@ -383,6 +404,64 @@ export async function commit({ userId, batchId, rows = [] }) {
           importBatchId: batch.id,
           importFingerprint: r.fingerprint
         });
+      }
+
+      // Proses penyimpanan CategoryRule di dalam transaksi yang sama
+      let rulesSaved = 0;
+      const ruleWarnings = [];
+
+      if (rulesToProcess.length > 0) {
+        // Hitung total aturan yang sudah dimiliki pengguna
+        const currentRuleCount = await tx.categoryRule.count({ where: { userId } });
+        let activeRuleCount = currentRuleCount;
+
+        for (const item of rulesToProcess) {
+          let cleanKw = item.keyword;
+          if (!cleanKw) {
+            ruleWarnings.push(`Baris ${item.index}: Kata kunci untuk aturan kategori tidak tersedia`);
+            continue;
+          }
+
+          // Netralkan karakter formula awal jika ada
+          cleanKw = sanitizeCell(cleanKw);
+          if (cleanKw.length > 100) {
+            cleanKw = cleanKw.slice(0, 100).trim();
+          }
+
+          if (cleanKw.length < 2) {
+            ruleWarnings.push(`Baris ${item.index}: Kata kunci "${cleanKw}" terlalu pendek`);
+            continue;
+          }
+
+          // Cek apakah keyword sudah ada untuk user
+          const existingRule = await tx.categoryRule.findFirst({
+            where: { userId, keyword: cleanKw }
+          });
+
+          if (!existingRule) {
+            if (activeRuleCount >= 500) {
+              ruleWarnings.push(`Batas maksimum 500 aturan kategori per pengguna telah tercapai, aturan untuk "${cleanKw}" dilewati`);
+              continue;
+            }
+
+            await tx.categoryRule.create({
+              data: {
+                userId,
+                keyword: cleanKw,
+                categoryId: item.categoryId
+              }
+            });
+            activeRuleCount++;
+            rulesSaved++;
+          } else {
+            // Perbarui kategori jika keyword sudah ada
+            await tx.categoryRule.update({
+              where: { id: existingRule.id },
+              data: { categoryId: item.categoryId }
+            });
+            rulesSaved++;
+          }
+        }
       }
 
       let importedCount = 0;
@@ -415,7 +494,9 @@ export async function commit({ userId, batchId, rows = [] }) {
         total_rows: updatedBatch.totalRows,
         imported_rows: importedCount,
         duplicate_rows: updatedBatch.duplicateRows,
-        skipped_rows: skippedCount
+        skipped_rows: skippedCount,
+        rules_saved: rulesSaved,
+        rule_warnings: ruleWarnings
       };
     },
     { timeout: 30000, maxWait: 10000 }

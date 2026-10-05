@@ -12,6 +12,7 @@ router.use(authenticateToken);
 
 router.get("/", categoryRuleController.getCategoryRules);
 router.post("/", categoryRuleController.createCategoryRule);
+router.put("/:id", categoryRuleController.updateCategoryRule);
 router.delete("/:id", categoryRuleController.deleteCategoryRule);
 
 export default router;

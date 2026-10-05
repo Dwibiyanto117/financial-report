@@ -29,6 +29,59 @@ const BUILTIN_KEYWORD_RULES = [
 ];
 
 /**
+ * Menghasilkan kandidat kata kunci (suggested_keyword) dari deskripsi transaksi.
+ * Membuang angka, tanggal, nomor referensi panjang, dan mengambil 1-3 kata bermakna pertama.
+ *
+ * @param {string} description
+ * @returns {string|null}
+ */
+export function deriveKeyword(description) {
+  if (!description || typeof description !== "string") return null;
+
+  // 1. Bersihkan karakter awal formula jika ada
+  let text = description.replace(/^['=+\-@]+/, "").trim();
+  if (!text) return null;
+
+  // 2. Buang tanggal format DD/MM/YYYY, YYYY-MM-DD, DD-MM-YY
+  text = text.replace(/\b\d{1,4}[-/]\d{1,2}[-/]\d{2,4}\b/g, " ");
+
+  // 3. Buang waktu HH:mm:ss atau HH:mm
+  text = text.replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, " ");
+
+  // 4. Buang pola nomor referensi atau kode angka/heksadesimal panjang (>= 5 digit)
+  text = text.replace(/\b[A-Za-z0-9]*\d{4,}[A-Za-z0-9]*\b/g, " ");
+  text = text.replace(/\b(REF|NO|TRX|INV|ID)[\s:#-]*[A-Za-z0-9]+/gi, " ");
+
+  // 5. Ganti karakter non-alfanumerik dengan spasi
+  text = text.replace(/[^A-Za-z0-9\s]/g, " ");
+
+  // 6. Pisahkan kata-kata, buang kata yang terlalu pendek (<= 1 huruf) atau murni angka
+  const words = text
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 2 && !/^\d+$/.test(w));
+
+  if (words.length === 0) return null;
+
+  // 7. Ambil 1 sampai 3 kata bermakna pertama
+  const candidateWords = words.slice(0, 3);
+  let candidate = candidateWords.join(" ").trim();
+
+  // Jika candidate kurang dari 4 karakter, coba tambahkan kata berikutnya jika ada
+  if (candidate.length < 4 && words.length > 3) {
+    candidate = words.slice(0, 4).join(" ").trim();
+  }
+
+  // Syarat: minimal 4 karakter, maksimal 100 karakter
+  if (candidate.length < 4) return null;
+  if (candidate.length > 100) {
+    candidate = candidate.slice(0, 100).trim();
+  }
+
+  return candidate || null;
+}
+
+/**
  * Memuat semua kategori yang tersedia untuk pengguna (kategori kustom user + default sistem).
  *
  * @param {number} userId
