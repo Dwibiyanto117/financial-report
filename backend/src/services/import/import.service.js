@@ -18,6 +18,7 @@ import {
   suggestCategoryId,
   findFallbackCategory
 } from "./categorizer.js";
+import { parsePositiveInt } from "../../utils/query.js";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_ROWS = 2000;
@@ -30,14 +31,10 @@ const MAX_ROWS = 2000;
  * @returns {Promise<object>}
  */
 async function resolveUserAccount(userId, accountId) {
-  if (!accountId) {
-    const error = new Error("accountId wajib diisi");
-    error.statusCode = 400;
-    throw error;
-  }
+  const validAccountId = parsePositiveInt(accountId, "account_id");
 
   const account = await prisma.account.findFirst({
-    where: { id: Number(accountId), userId }
+    where: { id: validAccountId, userId }
   });
 
   if (!account) {
@@ -253,8 +250,9 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
  * @returns {Promise<object>}
  */
 export async function commit({ userId, batchId, rows = [] }) {
+  const validBatchId = parsePositiveInt(batchId, "ID batch import");
   const batch = await prisma.importBatch.findFirst({
-    where: { id: Number(batchId), userId }
+    where: { id: validBatchId, userId }
   });
 
   if (!batch) {
@@ -386,8 +384,9 @@ export async function commit({ userId, batchId, rows = [] }) {
  * @returns {Promise<object>}
  */
 export async function rollback({ userId, batchId }) {
+  const validBatchId = parsePositiveInt(batchId, "ID batch import");
   const batch = await prisma.importBatch.findFirst({
-    where: { id: Number(batchId), userId }
+    where: { id: validBatchId, userId }
   });
 
   if (!batch) {
@@ -437,8 +436,8 @@ export async function rollback({ userId, batchId }) {
  */
 export async function listBatches(userId, query = {}) {
   const where = { userId };
-  if (query.accountId) {
-    where.accountId = Number(query.accountId);
+  if (query.accountId !== undefined && query.accountId !== null && String(query.accountId).trim() !== "") {
+    where.accountId = parsePositiveInt(query.accountId, "account_id");
   }
 
   return await prisma.importBatch.findMany({
@@ -476,8 +475,9 @@ export async function listBatches(userId, query = {}) {
  * @returns {Promise<object>}
  */
 export async function getBatch(userId, batchId) {
+  const validBatchId = parsePositiveInt(batchId, "ID batch import");
   const batch = await prisma.importBatch.findFirst({
-    where: { id: Number(batchId), userId },
+    where: { id: validBatchId, userId },
     include: {
       account: {
         select: {

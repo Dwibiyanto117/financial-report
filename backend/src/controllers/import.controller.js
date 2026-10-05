@@ -3,6 +3,7 @@
  */
 
 import * as importService from "../services/import/import.service.js";
+import { parsePositiveInt } from "../utils/query.js";
 
 /**
  * POST /api/imports/preview
@@ -10,13 +11,8 @@ import * as importService from "../services/import/import.service.js";
  */
 export async function previewImport(req, res, next) {
   try {
-    const accountId = req.body.account_id || req.body.accountId;
-    if (!accountId) {
-      return res.status(400).json({
-        success: false,
-        message: "account_id wajib diisi"
-      });
-    }
+    const rawAccountId = req.body.account_id || req.body.accountId;
+    const accountId = parsePositiveInt(rawAccountId, "account_id");
 
     if (!req.file) {
       return res.status(400).json({
@@ -54,15 +50,21 @@ export async function previewImport(req, res, next) {
  */
 export const commitImport = async (req, res, next) => {
   try {
-    const batchId = parseInt(req.params.id, 10);
-    if (isNaN(batchId)) {
+    const batchId = parsePositiveInt(req.params.id, "ID batch import");
+
+    const { rows = [] } = req.body;
+    if (!Array.isArray(rows)) {
       return res.status(400).json({
         success: false,
-        message: "ID batch import tidak valid"
+        message: "rows harus berupa array"
       });
     }
 
-    const { rows = [] } = req.body;
+    for (const item of rows) {
+      if (item && item.category_id !== undefined && item.category_id !== null) {
+        parsePositiveInt(item.category_id, "category_id");
+      }
+    }
 
     const result = await importService.commit({
       userId: req.user.id,
@@ -86,13 +88,7 @@ export const commitImport = async (req, res, next) => {
  */
 export const rollbackImport = async (req, res, next) => {
   try {
-    const batchId = parseInt(req.params.id, 10);
-    if (isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch import tidak valid"
-      });
-    }
+    const batchId = parsePositiveInt(req.params.id, "ID batch import");
 
     const result = await importService.rollback({
       userId: req.user.id,
@@ -115,7 +111,12 @@ export const rollbackImport = async (req, res, next) => {
  */
 export const getImports = async (req, res, next) => {
   try {
-    const accountId = req.query.account_id || req.query.accountId;
+    const rawAccountId = req.query.account_id || req.query.accountId;
+    let accountId = undefined;
+    if (rawAccountId !== undefined && rawAccountId !== null && String(rawAccountId).trim() !== "") {
+      accountId = parsePositiveInt(rawAccountId, "account_id");
+    }
+
     const batches = await importService.listBatches(req.user.id, { accountId });
 
     return res.status(200).json({
@@ -134,13 +135,7 @@ export const getImports = async (req, res, next) => {
  */
 export const getImportById = async (req, res, next) => {
   try {
-    const batchId = parseInt(req.params.id, 10);
-    if (isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch import tidak valid"
-      });
-    }
+    const batchId = parsePositiveInt(req.params.id, "ID batch import");
 
     const batch = await importService.getBatch(req.user.id, batchId);
 
@@ -153,3 +148,4 @@ export const getImportById = async (req, res, next) => {
     next(error);
   }
 };
+

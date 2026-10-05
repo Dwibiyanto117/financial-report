@@ -3,6 +3,7 @@
  */
 
 import * as categoryRuleService from "../services/categoryRule.service.js";
+import { parsePositiveInt } from "../utils/query.js";
 
 /**
  * GET /api/category-rules
@@ -28,19 +29,13 @@ export const getCategoryRules = async (req, res, next) => {
 export const createCategoryRule = async (req, res, next) => {
   try {
     const { keyword } = req.body;
-    const categoryId = req.body.category_id || req.body.categoryId;
+    const rawCatId = req.body.category_id || req.body.categoryId;
+    const categoryId = parsePositiveInt(rawCatId, "category_id");
 
     if (!keyword || !String(keyword).trim()) {
       return res.status(400).json({
         success: false,
         message: "Kata kunci (keyword) wajib diisi"
-      });
-    }
-
-    if (!categoryId) {
-      return res.status(400).json({
-        success: false,
-        message: "category_id wajib dipilih"
       });
     }
 
@@ -65,13 +60,7 @@ export const createCategoryRule = async (req, res, next) => {
  */
 export const deleteCategoryRule = async (req, res, next) => {
   try {
-    const ruleId = parseInt(req.params.id, 10);
-    if (isNaN(ruleId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID aturan kategori tidak valid"
-      });
-    }
+    const ruleId = parsePositiveInt(req.params.id, "ID aturan kategori");
 
     const result = await categoryRuleService.deleteCategoryRule(req.user.id, ruleId);
 

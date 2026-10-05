@@ -6,6 +6,7 @@
  */
 
 import prisma from "../config/prisma.js";
+import { parsePositiveInt } from "../utils/query.js";
 
 /**
  * Mengambil daftar aturan kategori milik pengguna.
@@ -47,18 +48,13 @@ export async function createCategoryRule(userId, { keyword, categoryId }) {
     throw error;
   }
 
-  if (!categoryId) {
-    const error = new Error("categoryId wajib dipilih");
-    error.statusCode = 400;
-    throw error;
-  }
-
+  const validCategoryId = parsePositiveInt(categoryId, "categoryId");
   const cleanKeyword = String(keyword).trim();
 
   // Pastikan kategori valid dan milik pengguna atau sistem default
   const category = await prisma.category.findFirst({
     where: {
-      id: Number(categoryId),
+      id: validCategoryId,
       OR: [
         { isDefault: true, userId: null },
         { userId }
@@ -114,9 +110,10 @@ export async function createCategoryRule(userId, { keyword, categoryId }) {
  * @returns {Promise<object>}
  */
 export async function deleteCategoryRule(userId, ruleId) {
+  const validRuleId = parsePositiveInt(ruleId, "ruleId");
   const rule = await prisma.categoryRule.findFirst({
     where: {
-      id: Number(ruleId),
+      id: validRuleId,
       userId
     }
   });

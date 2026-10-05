@@ -133,3 +133,39 @@ export function parseEnumParam(value, label, allowed) {
 
   return normalized;
 }
+
+const MAX_INT_32 = 2147483647;
+
+/**
+ * Memvalidasi dan mengubah nilai parameter menjadi bilangan bulat positif (> 0).
+ * Menolak string non-numerik, float, angka <= 0, dan integer melebihi INT 32-bit.
+ * Melempar error HTTP 400 dengan pesan bersih.
+ *
+ * @param {any} value
+ * @param {string} fieldLabel
+ * @returns {number}
+ */
+export function parsePositiveInt(value, fieldLabel) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    const error = new Error(`${fieldLabel} wajib diisi`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const str = String(value).trim();
+  if (!/^[1-9]\d*$/.test(str)) {
+    const error = new Error(`${fieldLabel} harus berupa bilangan bulat positif`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const num = Number(str);
+  if (!Number.isSafeInteger(num) || num > MAX_INT_32) {
+    const error = new Error(`${fieldLabel} melebihi batas nilai integer maksimum`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return num;
+}
+
