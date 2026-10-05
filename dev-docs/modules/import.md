@@ -67,11 +67,34 @@ Modul Import Mutasi Rekening memungkinkan pengguna mengunggah berkas mutasi bank
 | **Fingerprint** | `backend/src/services/import/fingerprint.js` | `sha256(accountId|tanggal|jam|nominal|tipe|deskripsi|urutan)` |
 | **Parser Mandiri** | `backend/src/services/import/parsers/mandiri.js` | Adapter e-Statement Mandiri (header berbasis konten, transaksi 2 baris, metadata saldo) |
 | **Parser Generic** | `backend/src/services/import/parsers/generic.js` | Adapter generik dengan mapping kolom dinamis (`mapping` JSON) |
-| **Categorizer** | `backend/src/services/import/categorizer.js` | Mesin rekomendasi kategori (`category_rules` user -> keyword sistem -> fallback) |
-| **Import Service** | `backend/src/services/import/import.service.js` | Logika bisnis preview, commit atomic, rollback atomic, riwayat |
-| **Category Rule Service** | `backend/src/services/categoryRule.service.js` | CRUD aturan kata kunci per pengguna |
+| **Categorizer** | `backend/src/services/import/categorizer.js` | Mesin rekomendasi kategori (`template` -> `category_rules` user terpanjang -> keyword sistem -> fallback). Menyediakan `deriveKeyword()` dan metrik `suggestion_source` |
+| **Import Service** | `backend/src/services/import/import.service.js` | Logika bisnis preview, commit atomic (dengan opt-in rule learning), rollback atomic, riwayat |
+| **Category Rule Service** | `backend/src/services/categoryRule.service.js` | CRUD aturan kata kunci per pengguna (termasuk update PUT /api/category-rules/:id) |
 | **Upload Middleware** | `backend/src/middlewares/upload.middleware.js` | Multer memoryStorage, batas 5 MB, validasi ekstensi .csv/.xlsx |
-| **Rate Limiter** | `backend/src/middlewares/rateLimiter.middleware.js` | Batas 10 request upload per 10 menit per user/IP |
+| **Rate Limiter** | `backend/src/middlewares/rateLimiter.middleware.js` | Batas bawaan 10 request upload per 10 menit per user/IP (bisa disesuaikan via `IMPORT_RATE_LIMIT_MAX`) |
+
+### Daftar Kata Kunci Bawaan Sistem (Built-in Rules)
+
+Hierarki penentuan kategori per baris transaksi:
+1. **Template Explicit Category (`template`)**: Kategori yang diisi secara eksplisit di berkas template FinReport (bila ada dan cocok).
+2. **User Custom Rules (`user_rule`)**: Aturan kustom pengguna diurutkan berdasarkan **panjang keyword terpanjang menang**. Jika panjangnya sama, aturan terbaru yang menang.
+3. **Built-in Keywords (`builtin`)**: Kata kunci bawaan sistem berikut (dicocokkan terhadap teks ternormalisasi):
+   - **Gaji (INCOME)**: GAJI, PAYROLL, SALARY, UPAH, HONOR, HONORARIUM
+   - **Bonus & Tunjangan (INCOME)**: BONUS, THR, INSENTIF, TUNJANGAN, REWARD, CASHBACK, KOMISI
+   - **Investasi & Dividen (INCOME)**: DIVIDEN, DIVIDEND, BUNGA DEPOSITO, INVESTASI, PROFIT, REKSADANA, OBLIGASI, COUPON, KUAPON, IMBAL HASIL
+   - **Pendapatan Usaha (INCOME)**: PENDAPATAN USAHA, OMSET, PENJUALAN, INVOICE, PEMBAYARAN KLIEN, SETORAN USAHA, REVENUE
+   - **Pemasukan Lainnya (INCOME)**: TRANSFER MASUK, KIRIMAN DANA, REFUND, PENGEMBALIAN DANA
+   - **Makanan & Minuman (EXPENSE)**: MAKANAN, MINUMAN, RESTO, RESTORAN, CAFE, KOPI, WARUNG, WARTEG, KANTIN, BAKSO, MIE AYAM, NASI GORENG, FOOD, KULINER, SNACK, COFFEE, ROTI, BAKERY, BEVERAGE
+   - **Transportasi (EXPENSE)**: BENSIN, PERTAMAX, PERTALITE, SOLAR, BBM, SPBU, PARKER, TOL, TARIF TOL, OJEK, TAKSI, KRL, KERETA, TIKET PESAWAT, TIKET KERETA, KAPAL, BUS, LOGISTIK, ONGKIR, PENGIRIMAN, EXPEDISI, SERVIS MOTOR, SERVIS MOBIL, BENGKEL, TAMBAL BAN, CUCI MOBIL, CUCI MOTOR
+   - **Tempat Tinggal & Sewa (EXPENSE)**: SEWA KOST, SEWA KONTRAKAN, SEWA RUMAH, SEWA APARTEMEN, IPL, IURAN WARGA, KEBERSIHAN, KEAMANAN, RENOVASI, PERBAIKAN RUMAH
+   - **Tagihan & Utilitas (EXPENSE)**: LISTRIK, TOKEN LISTRIK, PLN, AIR, PDAM, PULSA, PAKET DATA, INTERNET, WIFI, TELEPON, TAGIHAN, BPJS, GAS ELPIJI, ASURANSI
+   - **Belanja Kebutuhan (EXPENSE)**: SUPERMARKET, MINIMARKET, GROSIR, PASAR, BELANJA, SABUN, SHAMPO, DETERJEN, MINYAK GORENG, BERAS, GALON, GAS, KASUR, PERABOTAN
+   - **Hiburan & Rekreasi (EXPENSE)**: BIOSKOP, CINEMA, NONTON, TIKET WISATA, REKREASI, LIBURAN, HOTEL, VILLA, STREAMING, SUBSCRIPTION, GAME, MAINAN, KARAOKE
+   - **Kesehatan & Medis (EXPENSE)**: APOTEK, OBAT, VITAMIN, KLINIK, DOKTER, RUMAH SAKIT, LABORATORIUM, TES DARAH, GIGI, KACAMATA, OPTIK, MEDIS, VAKSIN
+   - **Pendidikan (EXPENSE)**: SEKOLAH, SPP, KULIAH, SEMESTER, KURSUS, PELATIHAN, WORKSHOP, BUKU, ALAT TULIS, ATK, BIMBEL, LES, SERTIFIKASI
+   - **Donasi & Sosial (EXPENSE)**: ZAKAT, INFAQ, INFAK, SEDEKAH, DONASI, SUMBANGAN, BAKSOS, KONDANGAN, AMAL, PERPULUHAN, KORBAN
+   - **Pengeluaran Lainnya (EXPENSE)**: BIAYA ADMIN, BIAYA TRANSFER, DENDA, BUNGA PINJAMAN, MATERAI, PAJAK
+4. **Fallback (`fallback`)**: Kategori default bertipe sama yang memuat nama "Lainnya".
 
 ---
 

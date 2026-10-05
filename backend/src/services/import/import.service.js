@@ -15,6 +15,7 @@ import { detectParser, getParser } from "./parsers/index.js";
 import {
   loadCategoriesForUser,
   loadUserCategoryRules,
+  suggestCategory,
   suggestCategoryId,
   findFallbackCategory,
   deriveKeyword
@@ -177,12 +178,18 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       seenInBatch.add(fingerprint);
     }
 
-    const suggestedCategoryId = suggestCategoryId({
+    const categorySuggestion = suggestCategory({
       description: rawRow.description,
       type: rawRow.type,
       userRules,
       categories
     });
+
+    const suggestedCategoryId = rawRow.suggested_category_id !== undefined
+      ? rawRow.suggested_category_id
+      : categorySuggestion.categoryId;
+
+    const suggestionSource = rawRow.suggestion_source || categorySuggestion.source;
 
     const suggestedKeyword = deriveKeyword(rawRow.description);
 
@@ -196,6 +203,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       balance: rawRow.balance !== undefined ? rawRow.balance : null,
       fingerprint,
       suggested_category_id: suggestedCategoryId,
+      suggestion_source: suggestionSource,
       suggested_keyword: suggestedKeyword,
       is_duplicate: isDuplicate
     });
@@ -287,6 +295,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       amount: r.amount,
       balance: r.balance,
       suggested_category_id: r.suggested_category_id,
+      suggestion_source: r.suggestion_source,
       suggested_keyword: r.suggested_keyword,
       is_duplicate: r.is_duplicate
     }))

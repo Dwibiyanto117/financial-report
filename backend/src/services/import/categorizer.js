@@ -10,23 +10,101 @@
 import prisma from "../../config/prisma.js";
 
 // Pola kata kunci bawaan sistem -> Nama Kategori Standar
-const BUILTIN_KEYWORD_RULES = [
+export const BUILTIN_KEYWORD_RULES = [
   // INCOME
-  { keywords: ["GAJI", "PAYROLL", "SALARY"], categoryName: "Gaji", type: "INCOME" },
-  { keywords: ["DIVIDEN", "DIVIDEND", "BUNGA DEPOSITO", "INVESTASI"], categoryName: "Investasi & Dividen", type: "INCOME" },
-  { keywords: ["BONUS", "THR", "INSENTIF", "TUNJANGAN"], categoryName: "Bonus & Tunjangan", type: "INCOME" },
-  { keywords: ["PENDAPATAN USAHA", "OMSET", "PENJUALAN"], categoryName: "Pendapatan Usaha", type: "INCOME" },
+  {
+    categoryName: "Gaji",
+    type: "INCOME",
+    keywords: ["GAJI", "PAYROLL", "SALARY", "UPAH", "HONOR", "HONORARIUM"]
+  },
+  {
+    categoryName: "Bonus & Tunjangan",
+    type: "INCOME",
+    keywords: ["BONUS", "THR", "INSENTIF", "TUNJANGAN", "REWARD", "CASHBACK", "KOMISI"]
+  },
+  {
+    categoryName: "Investasi & Dividen",
+    type: "INCOME",
+    keywords: ["DIVIDEN", "DIVIDEND", "BUNGA DEPOSITO", "INVESTASI", "PROFIT", "REKSADANA", "OBLIGASI", "COUPON", "KUAPON", "IMBAL HASIL"]
+  },
+  {
+    categoryName: "Pendapatan Usaha",
+    type: "INCOME",
+    keywords: ["PENDAPATAN USAHA", "OMSET", "PENJUALAN", "INVOICE", "PEMBAYARAN KLIEN", "SETORAN USAHA", "REVENUE"]
+  },
+  {
+    categoryName: "Pemasukan Lainnya",
+    type: "INCOME",
+    keywords: ["TRANSFER MASUK", "KIRIMAN DANA", "REFUND", "PENGEMBALIAN DANA"]
+  },
 
   // EXPENSE
-  { keywords: ["GRAB", "GOJEK", "GOCAR", "GORIDE", "TOL", "PERTAMINA", "SHELL", "KAI", "TIKET", "PARKIR", "TRANSJAKARTA", "MRT", "BLUEBIRD"], categoryName: "Transportasi", type: "EXPENSE" },
-  { keywords: ["INDOMARET", "ALFAMART", "TOKOPEDIA", "SHOPEE", "SUPERINDO", "HYPERMART", "ALFAMIDI", "TRANSITION", "BLIBLI", "LAZADA"], categoryName: "Belanja Kebutuhan", type: "EXPENSE" },
-  { keywords: ["PLN", "PDAM", "TELKOM", "INDIHOME", "LISTRIK", "PULSA", "BPJS", "TAGIHAN", "FIRSTMEDIA", "BIZNET", "WIFI"], categoryName: "Tagihan & Utilitas", type: "EXPENSE" },
-  { keywords: ["MIE AYAM", "RESTO", "CAFE", "KOPI", "WARUNG", "MCD", "KFC", "STARBUCKS", "MAKANAN", "FOOD", "GOPAY FOOD", "GRABFOOD", "SHOPEEFOOD", "BAKSO"], categoryName: "Makanan & Minuman", type: "EXPENSE" },
-  { keywords: ["APOTEK", "KIMIA FARMA", "HALODOC", "RUMAH SAKIT", "KLINIK", "DOKTER", "OBAT", "ALODOKTER"], categoryName: "Kesehatan & Medis", type: "EXPENSE" },
-  { keywords: ["NETFLIX", "SPOTIFY", "BIOSKOP", "XXI", "STEAM", "PLAYSTATION", "CINEMA", "YOUTUBE PREMIUM"], categoryName: "Hiburan & Rekreasi", type: "EXPENSE" },
-  { keywords: ["ZAKAT", "INFAQ", "SEDEKAH", "KITABISA", "DONASI", "BAKSOS"], categoryName: "Donasi & Sosial", type: "EXPENSE" },
-  { keywords: ["KURSUS", "BIMBEL", "SEKOLAH", "KULIAH", "UDEMY", "BUKU", "GRAMEDIA"], categoryName: "Pendidikan", type: "EXPENSE" }
+  {
+    categoryName: "Makanan & Minuman",
+    type: "EXPENSE",
+    keywords: ["MAKANAN", "MINUMAN", "RESTO", "RESTORAN", "CAFE", "KOPI", "WARUNG", "WARTEG", "KANTIN", "BAKSO", "MIE AYAM", "NASI GORENG", "FOOD", "KULINER", "SNACK", "COFFEE", "ROTI", "BAKERY", "BEVERAGE"]
+  },
+  {
+    categoryName: "Transportasi",
+    type: "EXPENSE",
+    keywords: ["BENSIN", "PERTAMAX", "PERTALITE", "SOLAR", "BBM", "SPBU", "PARKIR", "TOL", "TARIF TOL", "OJEK", "TAKSI", "KRL", "KERETA", "TIKET PESAWAT", "TIKET KERETA", "KAPAL", "BUS", "LOGISTIK", "ONGKIR", "PENGIRIMAN", "EXPEDISI", "SERVIS MOTOR", "SERVIS MOBIL", "BENGKEL", "TAMBAL BAN", "CUCI MOBIL", "CUCI MOTOR"]
+  },
+  {
+    categoryName: "Tempat Tinggal & Sewa",
+    type: "EXPENSE",
+    keywords: ["SEWA KOST", "SEWA KONTRAKAN", "SEWA RUMAH", "SEWA APARTEMEN", "IPL", "IURAN WARGA", "KEBERSIHAN", "KEAMANAN", "RENOVASI", "PERBAIKAN RUMAH"]
+  },
+  {
+    categoryName: "Tagihan & Utilitas",
+    type: "EXPENSE",
+    keywords: ["LISTRIK", "TOKEN LISTRIK", "PLN", "AIR", "PDAM", "PULSA", "PAKET DATA", "INTERNET", "WIFI", "TELEPON", "TAGIHAN", "BPJS", "GAS ELPIJI", "ASURANSI"]
+  },
+  {
+    categoryName: "Belanja Kebutuhan",
+    type: "EXPENSE",
+    keywords: ["SUPERMARKET", "MINIMARKET", "GROSIR", "PASAR", "BELANJA", "SABUN", "SHAMPO", "DETERJEN", "MINYAK GORENG", "BERAS", "GALON", "GAS", "KASUR", "PERABOTAN"]
+  },
+  {
+    categoryName: "Hiburan & Rekreasi",
+    type: "EXPENSE",
+    keywords: ["BIOSKOP", "CINEMA", "NONTON", "TIKET WISATA", "REKREASI", "LIBURAN", "HOTEL", "VILLA", "STREAMING", "SUBSCRIPTION", "GAME", "MAINAN", "KARAOKE"]
+  },
+  {
+    categoryName: "Kesehatan & Medis",
+    type: "EXPENSE",
+    keywords: ["APOTEK", "OBAT", "VITAMIN", "KLINIK", "DOKTER", "RUMAH SAKIT", "LABORATORIUM", "TES DARAH", "GIGI", "KACAMATA", "OPTIK", "MEDIS", "VAKSIN"]
+  },
+  {
+    categoryName: "Pendidikan",
+    type: "EXPENSE",
+    keywords: ["SEKOLAH", "SPP", "KULIAH", "SEMESTER", "KURSUS", "PELATIHAN", "WORKSHOP", "BUKU", "ALAT TULIS", "ATK", "BIMBEL", "LES", "SERTIFIKASI"]
+  },
+  {
+    categoryName: "Donasi & Sosial",
+    type: "EXPENSE",
+    keywords: ["ZAKAT", "INFAQ", "INFAK", "SEDEKAH", "DONASI", "SUMBANGAN", "BAKSOS", "KONDANGAN", "AMAL", "PERPULUHAN", "KORBAN"]
+  },
+  {
+    categoryName: "Pengeluaran Lainnya",
+    type: "EXPENSE",
+    keywords: ["BIAYA ADMIN", "BIAYA TRANSFER", "DENDA", "BUNGA PINJAMAN", "MATERAI", "PAJAK"]
+  }
 ];
+
+/**
+ * Menormalkan teks pencarian kata kunci (uppercase, buang karakter tanda baca berlebih, spasi tunggal).
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function normalizeKeywordText(text) {
+  if (!text) return "";
+  return String(text)
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /**
  * Menghasilkan kandidat kata kunci (suggested_keyword) dari deskripsi transaksi.
@@ -130,28 +208,47 @@ export function findFallbackCategory(categories, type) {
 }
 
 /**
- * Mengusulkan category_id untuk satu baris transaksi berdasarkan deskripsi dan tipe.
+ * Mengusulkan category_id dan suggestion_source untuk satu baris transaksi berdasarkan deskripsi dan tipe.
+ *
+ * Prioritas pencocokan:
+ * 1. Aturan user (user_rules): aturan dengan keyword terpanjang menang; jika sama panjang, yang terbaru (id terbesar / urutan) menang.
+ * 2. Aturan kata kunci bawaan (builtin).
+ * 3. Fallback kategori "Lainnya" sesuai tipe transaksi.
  *
  * @param {object} params
  * @param {string} params.description
  * @param {string} params.type - INCOME | EXPENSE
  * @param {Array<object>} params.userRules
  * @param {Array<object>} params.categories
- * @returns {number|null} ID kategori yang diusulkan
+ * @returns {{ categoryId: number|null, source: "user_rule"|"builtin"|"fallback" }}
  */
-export function suggestCategoryId({ description = "", type, userRules = [], categories = [] }) {
-  const normDesc = String(description).toUpperCase();
+export function suggestCategory({ description = "", type, userRules = [], categories = [] }) {
+  const normDesc = normalizeKeywordText(description);
   const normType = String(type).toUpperCase();
 
-  // 1. Cek rule kustom pengguna
-  for (const rule of userRules) {
-    if (!rule.keyword) continue;
-    const ruleKeyword = String(rule.keyword).toUpperCase().trim();
-    if (ruleKeyword && normDesc.includes(ruleKeyword)) {
-      // Pastikan tipe kategori cocok
+  // 1. Cek rule kustom pengguna (Urutkan: keyword terpanjang duluan, lalu id / createdAt terbaru)
+  const validUserRules = userRules
+    .filter((r) => r && r.keyword && String(r.keyword).trim().length > 0)
+    .map((r) => ({
+      ...r,
+      normalizedKeyword: normalizeKeywordText(r.keyword)
+    }))
+    .filter((r) => r.normalizedKeyword.length > 0)
+    .sort((a, b) => {
+      if (b.normalizedKeyword.length !== a.normalizedKeyword.length) {
+        return b.normalizedKeyword.length - a.normalizedKeyword.length; // Terpanjang menang
+      }
+      return (b.id || 0) - (a.id || 0); // Seri: yang terbaru menang
+    });
+
+  for (const rule of validUserRules) {
+    if (normDesc.includes(rule.normalizedKeyword)) {
       const matchedCat = categories.find((c) => c.id === rule.categoryId);
       if (matchedCat && matchedCat.type === normType) {
-        return matchedCat.id;
+        return {
+          categoryId: matchedCat.id,
+          source: "user_rule"
+        };
       }
     }
   }
@@ -161,13 +258,16 @@ export function suggestCategoryId({ description = "", type, userRules = [], cate
     if (rule.type !== normType) continue;
 
     for (const kw of rule.keywords) {
-      if (normDesc.includes(kw)) {
-        // Cari ID kategori berdasarkan nama dan tipe
+      const normKw = normalizeKeywordText(kw);
+      if (normKw && normDesc.includes(normKw)) {
         const matchedCat = categories.find(
           (c) => c.type === normType && c.name.toLowerCase() === rule.categoryName.toLowerCase()
         );
         if (matchedCat) {
-          return matchedCat.id;
+          return {
+            categoryId: matchedCat.id,
+            source: "builtin"
+          };
         }
       }
     }
@@ -175,5 +275,15 @@ export function suggestCategoryId({ description = "", type, userRules = [], cate
 
   // 3. Fallback ke kategori "Lainnya" sesuai tipe
   const fallback = findFallbackCategory(categories, normType);
-  return fallback ? fallback.id : null;
+  return {
+    categoryId: fallback ? fallback.id : null,
+    source: "fallback"
+  };
+}
+
+/**
+ * Backward compatibility: mengembalikan category_id saja.
+ */
+export function suggestCategoryId(params) {
+  return suggestCategory(params).categoryId;
 }
