@@ -23,86 +23,140 @@ enum AccountType {
   CASH
 }
 
+enum ImportStatus {
+  PREVIEW
+  COMMITTED
+  CANCELLED
+}
+
 model User {
-  id                      Int           @id @default(autoincrement())
-  name                    String        @db.VarChar(100)
-  email                   String        @unique @db.VarChar(191)
-  passwordHash            String        @map("password_hash") @db.VarChar(255)
-  recoveryToken           String?       @map("recovery_token") @db.VarChar(100)
-  recoveryTokenExpiresAt  DateTime?     @map("recovery_token_expires_at")
-  createdAt               DateTime      @default(now()) @map("created_at")
-  updatedAt               DateTime      @updatedAt @map("updated_at")
+  id                     Int       @id @default(autoincrement())
+  name                   String    @db.VarChar(100)
+  email                  String    @unique @db.VarChar(191)
+  passwordHash           String    @map("password_hash") @db.VarChar(255)
+  recoveryToken          String?   @map("recovery_token") @db.VarChar(100)
+  recoveryTokenExpiresAt DateTime? @map("recovery_token_expires_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   // Relasi
-  categories              Category[]
-  accounts                Account[]
-  transactions            Transaction[]
+  categories    Category[]
+  accounts      Account[]
+  transactions  Transaction[]
+  importBatches ImportBatch[]
+  categoryRules CategoryRule[]
 
   @@map("users")
 }
 
 model Account {
-  id               Int           @id @default(autoincrement())
-  userId           Int           @map("user_id")
-  name             String        @db.VarChar(100)
-  institution      String        @default("LAINNYA") @db.VarChar(50)
-  type             AccountType   @default(BANK)
-  accountNoMasked  String?       @map("account_no_masked") @db.VarChar(30)
-  openingBalance   Decimal       @default(0.00) @map("opening_balance") @db.Decimal(15, 2)
-  color            String        @default("#10B981") @db.VarChar(20)
-  isArchived       Boolean       @default(false) @map("is_archived")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
+  id              Int         @id @default(autoincrement())
+  userId          Int         @map("user_id")
+  name            String      @db.VarChar(100)
+  institution     String      @default("LAINNYA") @db.VarChar(50)
+  type            AccountType @default(BANK)
+  accountNoMasked String?     @map("account_no_masked") @db.VarChar(30)
+  openingBalance  Decimal     @default(0.00) @map("opening_balance") @db.Decimal(15, 2)
+  color           String      @default("#10B981") @db.VarChar(20)
+  isArchived      Boolean     @default(false) @map("is_archived")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
   // Relasi
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions     Transaction[]
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  importBatches ImportBatch[]
 
   @@index([userId, institution])
   @@map("accounts")
 }
 
 model Category {
-  id          Int              @id @default(autoincrement())
-  userId      Int?             @map("user_id")
-  name        String           @db.VarChar(100)
-  type        TransactionType
-  icon        String           @default("tag") @db.VarChar(50)
-  color       String           @default("#6B7280") @db.VarChar(20)
-  isDefault   Boolean          @default(false) @map("is_default")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
+  id        Int             @id @default(autoincrement())
+  userId    Int?            @map("user_id")
+  name      String          @db.VarChar(100)
+  type      TransactionType
+  icon      String          @default("tag") @db.VarChar(50)
+  color     String          @default("#6B7280") @db.VarChar(20)
+  isDefault Boolean         @default(false) @map("is_default")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
 
   // Relasi
-  user        User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  categoryRules CategoryRule[]
 
   @@index([userId, type])
   @@map("categories")
 }
 
 model Transaction {
-  id              Int              @id @default(autoincrement())
-  userId          Int              @map("user_id")
-  accountId       Int              @map("account_id")
-  categoryId      Int?             @map("category_id")
-  type            TransactionType
-  amount          Decimal          @db.Decimal(15, 2)
-  currency        String           @default("IDR") @db.VarChar(10)
-  transactionDate DateTime         @map("transaction_date") @db.Date
-  description     String?          @db.VarChar(255)
-  transferGroupId String?          @map("transfer_group_id") @db.VarChar(36)
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  id                Int             @id @default(autoincrement())
+  userId            Int             @map("user_id")
+  accountId         Int             @map("account_id")
+  categoryId        Int?            @map("category_id")
+  type              TransactionType
+  amount            Decimal         @db.Decimal(15, 2)
+  currency          String          @default("IDR") @db.VarChar(10)
+  transactionDate   DateTime        @map("transaction_date") @db.Date
+  description       String?         @db.VarChar(255)
+  transferGroupId   String?         @map("transfer_group_id") @db.VarChar(36)
+  importBatchId     Int?            @map("import_batch_id")
+  importFingerprint String?         @map("import_fingerprint") @db.VarChar(64)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
   // Relasi
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account         Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  @@unique([accountId, importFingerprint])
   @@index([userId, transactionDate])
   @@index([userId, categoryId])
   @@index([userId, accountId])
   @@index([transferGroupId])
+  @@index([importBatchId])
   @@map("transactions")
+}
+
+model ImportBatch {
+  id            Int          @id @default(autoincrement())
+  userId        Int          @map("user_id")
+  accountId     Int          @map("account_id")
+  parser        String       @db.VarChar(30)
+  fileName      String       @map("file_name") @db.VarChar(255)
+  status        ImportStatus @default(PREVIEW)
+  totalRows     Int          @default(0) @map("total_rows")
+  importedRows  Int          @default(0) @map("imported_rows")
+  duplicateRows Int          @default(0) @map("duplicate_rows")
+  parsedPayload Json?        @map("parsed_payload")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relasi
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+
+  @@index([userId, accountId])
+  @@map("import_batches")
+}
+
+model CategoryRule {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  keyword    String   @db.VarChar(100)
+  categoryId Int      @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relasi
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, keyword])
+  @@index([userId])
+  @@map("category_rules")
 }
