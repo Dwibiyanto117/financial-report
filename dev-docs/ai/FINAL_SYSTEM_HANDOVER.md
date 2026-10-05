@@ -1,13 +1,13 @@
 # FINAL SYSTEM HANDOVER — FinReport
 
-> **Status:** M7 COMPLETE (Multi-Account & Transfer)
-> **Version:** 0.3.0
-> **Handover Date:** 2026-10-02
+> **Status:** M8.1 COMPLETE (Statement Import Pipeline Core)
+> **Version:** 0.4.0
+> **Handover Date:** 2026-10-05
 
 ---
 
 ## 1. Arsitektur & Lingkungan Operasional
-- **Project Root**: `d:\Alif ICON Plus\Claude\financial-report`
+- **Project Root**: `d:\Projects\AntiGravity\Financial_report`
 - **Backend Directory**: `backend/`
   - URL Service: `http://localhost:5000`
   - Database: MySQL `finreport_db` (koneksi terpusat di `backend/.env`)
@@ -24,6 +24,7 @@
 - **MOD-04**: Dashboard Analitik (Saldo Berjalan, Donut Chart, Tren 12 Bulan).
 - **MOD-05**: Ekspor Laporan Excel (.xlsx) & PDF (.pdf).
 - **MOD-07**: Multi Rekening (Bank, E-Wallet, Cash) & Atomic Transfer Antar Rekening.
+- **MOD-08 (Core)**: Pipeline Import Mutasi Rekening (CSV, XLSX, Encrypted XLSX Mandiri, Fingerprint Deduplikasi SHA-256, Auto-Categorization, Atomic Commit & Rollback).
 
 ## 3. Akun Percobaan (Demo Account)
 - **Email**: `budi@example.com`

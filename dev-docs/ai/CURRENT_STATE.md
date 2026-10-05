@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
 > **Last Updated:** 2026-10-05
-> **Phase:** M7 selesai — M8 Statement Import siap dikerjakan
+> **Phase:** M8.1 Selesai (Backend Pipeline Import Mutasi Terverifikasi) — v0.4.0
 
 ---
 
@@ -120,3 +120,50 @@ Antarmuka pengguna (Frontend React) untuk pengelolaan multi rekening dan transfe
   - **Laporan (`Reports.jsx`)**: Filter rekening untuk pratinjau tabel serta unduhan file Excel dan PDF.
 - [x] **Verifikasi Bundle**:
   - `npm run build` sukses 100% tanpa error kompilasi/bundle.
+
+---
+
+## Batch M8.1 — Statement Import Pipeline Core (2026-10-05)
+
+Pondasi backend untuk modul Statement Import (MOD-08) selesai diimplementasikan dan terverifikasi penuh:
+
+- [x] **Skema Database & Migrasi**:
+  - Enum `ImportStatus` (`PREVIEW`, `COMMITTED`, `CANCELLED`).
+  - Model `ImportBatch` (`import_batches`) untuk siklus hidup berkas mutasi dan penampung baris pratinjau (`parsed_payload`).
+  - Model `CategoryRule` (`category_rules`) untuk pemetaan kata kunci ke kategori per-pengguna dengan indeks unik `(user_id, keyword)`.
+  - Tabel `transactions`: Penambahan foreign key `import_batch_id` (SetNull) dan constraint `import_fingerprint` dengan `UNIQUE(account_id, import_fingerprint)`.
+  - Migrasi sukses via `prisma db push` dengan verifikasi nol data loss.
+- [x] **Utilitas Inti (`backend/src/services/import/`)**:
+  - `normalize.js`: Konversi format angka Indonesia (`1.234.567,00`) dan Internasional, parsing tanggal/jam fleksibel (termasuk nama bulan ID/EN), dan fungsi `sanitizeCell()` untuk menetralkan awalan formula berbahaya (`= + - @`).
+  - `fingerprint.js`: Hash unik `sha256(accountId|tanggal|jam|nominal|tipe|deskripsi|urutan)` untuk proteksi duplikasi data mutasi.
+- [x] **Reader & Parsers (`backend/src/services/import/parsers/`)**:
+  - `reader.js`: Pembacaan buffer in-memory untuk CSV, XLSX (ExcelJS), dan berkas terenkripsi menggunakan `officecrypto-tool` tanpa menulis ke disk.
+  - `mandiri.js`: Adapter parser e-Statement Mandiri dengan pelacakan header berbasis teks dinamis, penggabungan baris tanggal + jam (format 2-baris per transaksi), pembacaan ringkasan metadata saldo, dan kalkulasi rekonsiliasi non-blocking.
+  - `generic.js`: Adapter parser generik dengan pemetaan kolom dinamis (`mapping` nama kolom atau indeks).
+  - `index.js`: Registry parser dengan auto-detection skor keyakinan (confidence >= 0.5) dan penolakan 400 jika tidak dikenali.
+- [x] **Engine & Auto-Categorization**:
+  - `categorizer.js`: Mesin penentu kategori dengan prioritas aturan kustom pengguna (`category_rules`), aturan kata kunci bawaan (Grab, Indomaret, PLN, Gaji, dll.), dan fallback kategori "Lainnya" sesuai tipe transaksi.
+  - `import.service.js`:
+    - `preview`: Validasi berkas, ekstraksi baris, kalkulasi fingerprint, penandaan duplikat, dan penyimpanan batch PREVIEW.
+    - `commit`: Penyimpanan transaksi atomik dalam satu transaksi database, resolusi race condition fingerprint (P2002), dan pembersihan `parsed_payload`.
+    - `rollback`: Pembatalan batch COMMITTED menjadi CANCELLED dan penghapusan transaksi terkait secara atomik.
+    - `listBatches` & `getBatch`: Riwayat dan detail batch pengguna.
+  - `categoryRule.service.js`: CRUD aturan kata kunci per pengguna.
+- [x] **Endpoint REST API & Keamanan Upload**:
+  - Rute `/api/imports/preview` dengan Multer memoryStorage, batas 5 MB, batas 2000 baris, dan proteksi rate limiter (10 upload per 10 menit per user/IP).
+  - Rute `/api/imports/:id/commit`, `/api/imports/:id` (rollback), `/api/imports` (riwayat).
+  - Rute `/api/category-rules` (GET, POST, DELETE).
+  - Isolasi data pengguna: seluruh query difilter `userId` dan kepemilikan rekening divalidasi.
+  - Zero-logging kredensial: password berkas tidak pernah dicatat pada log atau disimpan permanen.
+- [x] **Verifikasi Runtime Lengkap (`backend/scripts/verify-m8.1.js`)**:
+  - 8 skenario wajib lulus 100% terhadap API dan MySQL nyata:
+    1. Preview sampel nyata Mandiri dengan password benar -> 10 transaksi terparse akurat beserta jam dan keterangan.
+    2. Preview dengan password salah -> HTTP 400 pesan jelas ("Password file salah").
+    3. Preview berkas XLSX tidak terenkripsi -> berjalan normal.
+    4. Commit batch -> 10 transaksi tercipta atomik, saldo rekening dan dashboard summary terbarui.
+    5. Preview ulang berkas yang sama -> seluruh 10 baris terdeteksi sebagai duplikat via fingerprint.
+    6. Rollback batch -> seluruh transaksi batch terhapus atomik, saldo kembali normal.
+    7. Rekonsiliasi -> peringatan selisih muncul tanpa memblokir proses.
+    8. Akses rekening user lain -> ditolak HTTP 404 tanpa kebocoran data.
+  - Uji batas keamanan: penolakan berkas > 5 MB, penolakan ekstensi tidak didukung (.txt), penolakan > 2000 baris transaksi.
+

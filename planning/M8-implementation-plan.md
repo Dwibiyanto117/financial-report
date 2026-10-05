@@ -1,23 +1,16 @@
 # Rencana Pengerjaan M8 — Statement Import (RESUME POINT)
 
-> **Status:** SIAP DIKERJAKAN — menunggu sesi berikutnya
+> **Status:** M8.1 SELESAI — Titik lanjut: M8.2 & M8.3
 > **Sumber:** `planning/bank-import.md`, `dev-docs/ai/TASKS.md` Batch M8.1
-> **Rencana teknis detail:** `dev-docs/temp/M8.1-plan.md` (scratchpad, tidak di-commit)
-> **Dibuat:** 2026-10-05
+> **Diperbarui:** 2026-10-05
 
 ---
 
 ## 1. Cara Melanjutkan (mulai dari sini)
 
 1. `git pull` di branch `dev`.
-2. Jalankan MySQL (mis. XAMPP: `C:\xampp\mysql_start.bat`). Cek dengan `npx prisma migrate status` dari `backend/`.
-3. Baca `dev-docs/temp/M8.1-plan.md` jika masih ada (scratchpad, tidak masuk git); jika sudah terhapus, rencana ringkasnya ada di bagian 4-6 dokumen ini.
-4. Baca ulang `planning/bank-import.md`, lalu mulai Batch M8.1.
-
-**Keputusan yang sudah diambil user (tidak perlu ditanyakan lagi):**
-- Dekripsi file .xlsx terenkripsi memakai `officecrypto-tool` (pure JS, MIT, tanpa binary).
-- Pengerjaan langsung di branch `dev`, bukan `feat/*`.
-- Password file mutasi **hanya** dikirim per-request saat upload, dipakai di memori, tidak pernah disimpan atau dicatat di log.
+2. Batch M8.1 (core backend, skema, parser Mandiri & Generic, fingerprint, commit, rollback) sudah selesai dan lulus verifikasi 100%.
+3. Lanjutkan ke **Batch M8.2** (Adapter BCA & penyempurnaan rules) atau **Batch M8.3** (Frontend UI `/import`).
 
 ---
 
@@ -27,8 +20,9 @@
 |------|--------|
 | MVP (M1-M6) | Selesai & terverifikasi |
 | MOD-07 Multi Rekening + Transfer (M7.1, M7.2) | Selesai (`67c91cc`) |
-| **M8 Statement Import** | **Belum dimulai — berikutnya** |
-| Sampel Mandiri terenkripsi | Sudah diterima & struktur sudah dianalisis |
+| **M8.1 Pipeline Import Core (Backend)** | **Selesai & terverifikasi (v0.4.0)** |
+| **M8.2 & M8.3 UI & Extended Adapters** | **Siap dikerjakan berikutnya** |
+| Sampel Mandiri terenkripsi | Terintegrasi & teruji penuh pada pipeline |
 
 ---
 

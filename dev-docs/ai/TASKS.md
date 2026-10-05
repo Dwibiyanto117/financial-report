@@ -68,6 +68,20 @@
 > **Status: SIAP DIKERJAKAN.** Rencana teknis lengkap (termasuk temuan sampel Mandiri terenkripsi, keputusan user, dan urutan batch) ada di `planning/M8-implementation-plan.md`.
 
 ### Batch M8.1: Statement Import Pipeline Core (Backend)
-- [ ] Model `ImportBatch`, `CategoryRule`, dan kolom `import_fingerprint` di database.
-- [ ] Endpoint `/api/imports/preview`, `/api/imports/:id/commit`, `/api/imports/:id` (rollback).
-- [ ] Parser interface dan engine pendeteksi duplikasi berbasis hash sha256.
+- [x] Model `ImportBatch`, `CategoryRule`, dan kolom `import_fingerprint` di database (`prisma db push`).
+- [x] Utilitas normalisasi angka ID/EN, tanggal/jam, sanitasi sel anti-injeksi formula (`normalize.js`).
+- [x] Utilitas fingerprint SHA-256 transaksi unik per rekening (`fingerprint.js`).
+- [x] Reader in-memory CSV, XLSX biasa, dan XLSX terenkripsi via `officecrypto-tool` (`reader.js`).
+- [x] Parser adapter: `mandiri.js` (header berbasis konten, transaksi 2 baris, metadata saldo) dan `generic.js` (pemetaan kolom dinamis).
+- [x] Engine auto-categorization berbasis `category_rules` user, built-in keywords, dan fallback (`categorizer.js`).
+- [x] Engine import: `preview`, `commit` atomic, `rollback` atomic, riwayat (`import.service.js`).
+- [x] Endpoint REST API & Upload: `/api/imports/preview`, `/api/imports/:id/commit`, `/api/imports/:id` (rollback), `/api/imports` (history), `/api/category-rules`.
+- [x] Keamanan upload: Multer memoryStorage, batas 5 MB, batas 2000 baris, rate limit 10/10m.
+- [x] Skrip verifikasi 8 skenario wajib (`backend/scripts/verify-m8.1.js`) lulus 100%.
+
+---
+
+## Milestone Selanjutnya (Next: M8.2 & M8.3)
+- [ ] **Batch M8.2**: Parser adapter BCA (jika sampel tersedia) dan penyempurnaan rule kategori.
+- [ ] **Batch M8.3**: Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback).
+- [ ] **Batch M8.4**: Adapter e-wallet (jika didukung) & sinkronisasi dokumentasi akhir M8.
