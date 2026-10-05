@@ -80,13 +80,19 @@ Modul Import Mutasi Rekening memungkinkan pengguna mengunggah berkas mutasi bank
 | Method | Endpoint | Deskripsi | Autentikasi |
 |--------|----------|-----------|:-----------:|
 | `POST` | `/api/imports/preview` | Upload berkas & buat preview batch (multipart: `account_id`, `file`, opsional `parser`, `mapping`, `file_password`) | Bearer Token |
-| `POST` | `/api/imports/:id/commit` | Commit batch preview menjadi transaksi aktual (`rows` override) | Bearer Token |
+| `POST` | `/api/imports/:id/commit` | Commit batch preview menjadi transaksi aktual (`rows` override: `[{ index, category_id, include }]`). Mengembalikan metrik `imported_rows`, `duplicate_rows`, dan `skipped_rows` | Bearer Token |
 | `DELETE` | `/api/imports/:id` | Rollback batch berstatus COMMITTED | Bearer Token |
 | `GET` | `/api/imports` | Daftar riwayat batch pengguna | Bearer Token |
 | `GET` | `/api/imports/:id` | Detail batch import | Bearer Token |
 | `GET` | `/api/category-rules` | Daftar aturan kata kunci kategori pengguna | Bearer Token |
 | `POST` | `/api/category-rules` | Tambah aturan kata kunci kategori (`keyword`, `category_id`) | Bearer Token |
 | `DELETE` | `/api/category-rules/:id` | Hapus aturan kata kunci | Bearer Token |
+
+> **Metrik Hasil Commit:**
+> - `imported_rows`: Jumlah baris yang berhasil tersimpan ke database.
+> - `duplicate_rows`: Jumlah baris yang merupakan duplikat (preview duplicate + tabrakan fingerprint saat insert).
+> - `skipped_rows`: Jumlah baris non-duplikat yang sengaja tidak disertakan/dibuang oleh pengguna (`include: false`). Dikembalikan pada respons tanpa menambah kolom baru di tabel `import_batches`.
+
 
 ---
 

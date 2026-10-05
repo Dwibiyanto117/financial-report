@@ -292,6 +292,8 @@ export async function commit({ userId, batchId, rows = [] }) {
   return await prisma.$transaction(
     async (tx) => {
       const transactionsToInsert = [];
+      let skippedCount = 0;
+      let previewDupNotAttempted = 0;
 
       for (const r of payloadRows) {
         const override = overrideMap.get(r.index);
@@ -303,6 +305,11 @@ export async function commit({ userId, batchId, rows = [] }) {
         }
 
         if (!shouldInclude) {
+          if (r.is_duplicate) {
+            previewDupNotAttempted++;
+          } else {
+            skippedCount++;
+          }
           continue;
         }
 
@@ -342,7 +349,9 @@ export async function commit({ userId, batchId, rows = [] }) {
         importedCount = createResult.count;
       }
 
-      const duplicateCollision = transactionsToInsert.length - importedCount;
+      // Tabrakan fingerprint saat insert karena transaksi sudah ada di DB
+      const fingerprintCollisions = transactionsToInsert.length - importedCount;
+      const finalDuplicateCount = previewDupNotAttempted + fingerprintCollisions;
 
       // Perbarui status batch menjadi COMMITTED dan bersihkan parsedPayload
       const updatedBatch = await tx.importBatch.update({
@@ -350,7 +359,7 @@ export async function commit({ userId, batchId, rows = [] }) {
         data: {
           status: "COMMITTED",
           importedRows: importedCount,
-          duplicateRows: batch.duplicateRows + duplicateCollision,
+          duplicateRows: finalDuplicateCount,
           parsedPayload: null
         }
       });
@@ -360,7 +369,8 @@ export async function commit({ userId, batchId, rows = [] }) {
         status: updatedBatch.status,
         total_rows: updatedBatch.totalRows,
         imported_rows: importedCount,
-        duplicate_rows: updatedBatch.duplicateRows
+        duplicate_rows: updatedBatch.duplicateRows,
+        skipped_rows: skippedCount
       };
     },
     { timeout: 30000, maxWait: 10000 }
