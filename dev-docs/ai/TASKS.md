@@ -65,6 +65,8 @@
 
 ## Milestone Selanjutnya (Next: M8 Statement Import)
 
+> **Status: SIAP DIKERJAKAN.** Rencana teknis lengkap (termasuk temuan sampel Mandiri terenkripsi, keputusan user, dan urutan batch) ada di `planning/M8-implementation-plan.md`.
+
 ### Batch M8.1: Statement Import Pipeline Core (Backend)
 - [ ] Model `ImportBatch`, `CategoryRule`, dan kolom `import_fingerprint` di database.
 - [ ] Endpoint `/api/imports/preview`, `/api/imports/:id/commit`, `/api/imports/:id` (rollback).

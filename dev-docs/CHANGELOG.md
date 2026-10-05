@@ -5,6 +5,16 @@ Versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Dokumen Rencana M8**: `planning/M8-implementation-plan.md` — rencana pengerjaan Statement Import (MOD-08) berisi temuan struktur sampel e-Statement Mandiri terenkripsi, keputusan teknis user, ruang lingkup Batch M8.1, dan skenario verifikasi.
+
+### Notes
+- Perubahan ini hanya dokumentasi; belum ada kode M8 yang diimplementasikan.
+
+---
+
 ## [0.2.0] — 2026-09-16
 
 ### Added

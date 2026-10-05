@@ -30,3 +30,5 @@
 |-----------|---------------|-------|
 | **M7: Multi Rekening** | MOD-07 | Rekening, transfer, migrasi data, UI (M7.1-M7.2) |
 | **M8: Statement Import** | MOD-08 | Pipeline import, adapter BCA/Mandiri/e-wallet, UI (M8.1-M8.4) |
+
+> **M8 berstatus SIAP DIKERJAKAN.** Rencana teknis, temuan sampel Mandiri, dan urutan batch ada di `planning/M8-implementation-plan.md`.
