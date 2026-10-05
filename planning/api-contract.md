@@ -248,5 +248,89 @@ Authorization: Bearer <jwt_access_token>
 
 ---
 
-## 3. Endpoint Post-MVP (PROPOSED)
-Endpoint `/api/accounts`, `/api/transfers`, `/api/imports/*`, `/api/category-rules`. Detail: `planning/bank-import.md` bagian 8.
+## 3. Endpoint Post-MVP
+Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.md`.
+
+### 3.1 Template Standar FinReport (`GET /api/imports/template`)
+- **Query Params**:
+  - `bank`: Kode bank dari allowlist (`BCA`, `MANDIRI`, `BRI`, `BNI`, `CIMB`, `JAGO`, `DANA`, `OVO`, `GOPAY`, `LAINNYA`), default `LAINNYA`.
+  - `format`: `xlsx` atau `csv`, default `xlsx`.
+- **Response**: File streaming attachment (`Content-Disposition: attachment; filename="finreport-template-<bank>.<format>"`).
+
+### 3.2 Pratinjau Mutasi (`POST /api/imports/preview`)
+- **Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+- **Body**: `file` (File), `account_id` (Integer), opsional `parser`, `mapping` (JSON), `file_password` (String).
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "batch_id": 12,
+      "parser": "template",
+      "file_name": "finreport-template-mandiri.xlsx",
+      "meta": { "template_version": "FINREPORT-IMPORT-V1", "bank": "MANDIRI", "accountNumberMasked": "...1234" },
+      "warnings": [],
+      "suggested_account": { "id": 1, "name": "Bank Mandiri", "institution": "MANDIRI", "match": "last4" },
+      "summary": { "total": 10, "duplicate": 1, "new": 9, "invalid": 0 },
+      "rows": [
+        {
+          "index": 1,
+          "date": "2026-08-15",
+          "time": "10:30:00",
+          "description": "Pembayaran Toko",
+          "type": "EXPENSE",
+          "amount": 50000,
+          "balance": 1500000,
+          "suggested_category_id": 3,
+          "suggestion_source": "template",
+          "suggested_keyword": "Pembayaran Toko",
+          "is_duplicate": false
+        }
+      ]
+    }
+  }
+  ```
+
+### 3.3 Commit Import Mutasi (`POST /api/imports/:id/commit`)
+- **Headers**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Body**:
+  ```json
+  {
+    "rows": [
+      { "index": 1, "category_id": 3, "include": true, "learn_rule": true, "keyword": "Pembayaran Toko" }
+    ]
+  }
+  ```
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Impor mutasi berhasil diselesaikan",
+    "data": {
+      "batch_id": 12,
+      "imported_rows": 9,
+      "duplicate_rows": 1,
+      "skipped_rows": 0,
+      "rules_saved": 1,
+      "rule_warnings": []
+    }
+  }
+  ```
+
+### 3.4 Update Aturan Kategori (`PUT /api/category-rules/:id`)
+- **Headers**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Body**:
+  ```json
+  {
+    "keyword": "toko kelontong",
+    "category_id": 3
+  }
+  ```
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Aturan kategori berhasil diperbarui",
+    "data": { "id": 5, "userId": 1, "keyword": "toko kelontong", "categoryId": 3 }
+  }
+  ```

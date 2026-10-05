@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
-> **Last Updated:** 2026-10-05
-> **Phase:** M8.1 Selesai (Backend Pipeline Import Mutasi Terverifikasi) — v0.4.0
+> **Last Updated:** 2026-10-06
+> **Phase:** M8.2 Selesai (Statement Import Enhancements & Standard Template) — v0.5.0
 
 ---
 
@@ -163,4 +163,39 @@ Pondasi backend untuk modul Statement Import (MOD-08) selesai diimplementasikan 
   - Sanitasi menyeluruh terhadap skrip pengujian dari jalur file lokal absolut dan digit rekening nyata.
   - Dokumentasi teknis terpusat di `dev-docs/ai/TECHNICAL_DEBT.md` (TD-004 s/d TD-007).
   - Generator berkas uji sintetis mandiri (`backend/scripts/seed-m8-testdata.js`) dan test suite extended (`backend/scripts/verify-m8.1-synthetic.js`) lulus 11 skenario 100%.
+
+---
+
+## Batch M8.2 — Statement Import Enhancements & Standard Template (2026-10-06)
+
+Penyempurnaan fungsionalitas cerdas dan penyediaan template standar seragam pada backend modul Statement Import (MOD-08) selesai diimplementasikan dan terverifikasi penuh:
+
+- [x] **Strict Default Rate Limit & Hardening (Batch M8.2-0)**:
+  - Nilai bawaan upload rate limiter diatur ketat ke 10 request per 10 menit di seluruh lingkungan melalui fungsi pembaca aman `parseRateLimitMax()`. Pelonggaran hanya dimungkinkan via env eksplisit `IMPORT_RATE_LIMIT_MAX`.
+  - Placeholder `IMPORT_RATE_LIMIT_MAX=10` ditambahkan pada `backend/.env.example`.
+  - Komentar yang memuat digit spesifik pada `parsers/mandiri.js` dinetralkan.
+  - Dokumentasi TD-007 pada `commit-logs/2026-10-05.md` dan digit sampel pada `M8-implementation-plan.md` diselaraskan.
+- [x] **Usulan Rekening Tujuan dari 4 Digit Akhir (Batch M8.2-1)**:
+  - Pada `import.service.js` `preview()`, sistem membaca metadata `parseResult.meta.accountNumberMasked` (dari nama file berkas Mandiri atau sheet Info template) dan mencocokkan 4 digit terakhir ke rekening aktif pengguna (`userId`).
+  - Mengembalikan `suggested_account: { id, name, institution, match: "last4" }` jika tepat 1 rekening cocok. Jika 0 atau >= 2 rekening cocok, mengembalikan `null`.
+  - Menghasilkan peringatan non-blocking pada `warnings[]` bila nomor rekening berkas tidak cocok dengan rekening yang dipilih pengguna, tanpa membatalkan proses import.
+- [x] **Aturan Belajar Kategori (Learn Rule) & Endpoint Edit Aturan (Batch M8.2-2)**:
+  - Helper `deriveKeyword()` pada `categorizer.js` mengekstrak kandidat kata kunci (`suggested_keyword`) dari deskripsi dengan membuang angka, tanggal, waktu, dan nomor referensi panjang.
+  - Parameter opt-in `learn_rule: true` per baris saat `commit` menyimpan aturan kategori ke tabel `category_rules` secara atomik di dalam `$transaction` yang sama (maksimum 500 aturan per pengguna).
+  - Kata kunci yang sudah ada diperbarui kategorinya (upsert semantics).
+  - Endpoint baru `PUT /api/category-rules/:id` memungkinkan pembaruan `keyword` dan `category_id` dengan validasi integer positif, pengecekan hak milik, dan penanganan konflik `UNIQUE(userId, keyword)` dengan HTTP 400 bersih.
+- [x] **Penyempurnaan Prioritas Kategorisasi (Batch M8.2-3)**:
+  - Prioritas penentuan kategori pada `suggestCategory()`:
+    1. Kategori eksplisit dari template (`suggestion_source: "template"`).
+    2. Aturan kustom pengguna dengan urutan **keyword terpanjang menang** (longest keyword precedence; seri: id terbaru menang) (`suggestion_source: "user_rule"`).
+    3. Aturan kata kunci bawaan sistem yang diperluas (`suggestion_source: "builtin"`).
+    4. Kategori fallback "Lainnya" sesuai tipe (`suggestion_source: "fallback"`).
+- [x] **Template Standar FinReport & Adapter Parser Template (Batch M8.2-4)**:
+  - Allowlist institusi bank dan dompet digital yang didukung pada `bankTemplates.js`: `BCA`, `MANDIRI`, `BRI`, `BNI`, `CIMB`, `JAGO`, `DANA`, `OVO`, `GOPAY`, `LAINNYA`.
+  - In-memory generator pada `templateGenerator.js` untuk format XLSX (sheet `Mutasi` dengan freeze header & dropdown validation, sheet `Info`, sheet `Petunjuk`) dan CSV.
+  - Endpoint `GET /api/imports/template` dengan validasi parameter `bank` dan `format` (`xlsx` / `csv`).
+  - Parser adapter `template` (`parsers/template.js`) dengan deteksi skor 1.0 (sheet Info `FINREPORT-IMPORT-V1`) dan 0.9 (header mutasi standar), ekstraksi tanggal Date object berbasis komponen UTC untuk mencegah pergeseran zona waktu (WIB vs UTC), sanitasi formula, dan penghitungan baris rusak pada `summary.invalid`.
+- [x] **Suite Pengujian Sintetis & Regresi (Batch M8.2-5)**:
+  - Skrip pengujian mandiri `backend/scripts/verify-m8.2.js` lulus 100% pada 7 skenario pengujian komprehensif (usulan rekening, belajar aturan, endpoint PUT, longest-keyword precedence, download template, roundtrip XLSX, invariansi zona waktu UTC vs Asia/Jakarta, batas 2000 baris, dan regresi baseline pengguna lama `budi@example.com`).
+
 

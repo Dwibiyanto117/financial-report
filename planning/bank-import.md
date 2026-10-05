@@ -68,6 +68,16 @@ Setiap format = 1 file di `backend/src/services/import/parsers/` dengan kontrak 
 
 > Perkiraan kolom lain di atas BUKAN spesifikasi. Setiap adapter wajib divalidasi terhadap contoh file asli (dianonimkan) sebelum dinyatakan selesai; format bank bisa berubah antar versi internet banking.
 
+## 5.2 Jalur Template FinReport (Standard Template)
+Untuk menjembatani institusi perbankan dan dompet digital yang belum memiliki parser spesifik (termasuk BCA dan e-wallet yang ekspor mutasinya belum memiliki format baku), FinReport menyediakan format berkas standar seragam (XLSX dan CSV):
+- **Alasan & Pendekatan**:
+  1. Memberikan format input yang konsisten, bersih, dan mudah diisi oleh pengguna (cukup salin data mutasi dari e-statement/m-banking ke kolom template).
+  2. Format kolom seragam untuk semua bank/institusi: `Tanggal | Waktu | Keterangan | Jenis | Nominal | Saldo | Kategori`.
+  3. Header pada berkas XLSX dibekukan (freeze panes), diberi styling rapi, dan dilengkapi validasi data dropdown pada kolom `Jenis` (`MASUK`, `KELUAR`).
+  4. Disertai sheet `Info` yang memuat metadata template (`FINREPORT-IMPORT-V1`, kode bank, dan 4 digit akhir rekening opsional) serta sheet `Petunjuk` dengan instruksi pemakaian dan contoh data fiktif.
+  5. Pengguna dapat mengisi nama kategori secara eksplisit pada kolom `Kategori`; bila cocok dengan kategori sistem/user bertipe sama, maka usulan kategori ini memiliki prioritas tertinggi (`suggestion_source: "template"`).
+  6. **Status BCA & E-Wallet**: Parser khusus BCA dan e-wallet (PDF/format asli aplikasi) ditunda hingga sampel berkas asli yang valid tersedia. Pengguna BCA, BRI, BNI, CIMB, Jago, Dana, OVO, GoPay, dan institusi lainnya diarahkan menggunakan jalur Template FinReport ini.
+
 ## 6. Aturan Bisnis Import
 - **Fingerprint:** `sha256(account_id | tanggal | nominal | tipe | deskripsi_ternormalisasi | urutan_kemunculan_dalam_hari)`, unique per rekening. Urutan kemunculan mencegah dua transaksi identik yang sah di hari yang sama dianggap duplikat.
 - Nominal format Indonesia ("1.250.000,00") dan internasional dinormalisasi ke Decimal.

@@ -1,8 +1,8 @@
 # FINAL SYSTEM HANDOVER — FinReport
 
-> **Status:** M8.1 COMPLETE (Statement Import Pipeline Core)
-> **Version:** 0.4.0
-> **Handover Date:** 2026-10-05
+> **Status:** M8.2 COMPLETE (Statement Import Enhancements & Standard Template)
+> **Version:** 0.5.0
+> **Handover Date:** 2026-10-06
 
 ---
 

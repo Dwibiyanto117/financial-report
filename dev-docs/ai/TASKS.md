@@ -89,6 +89,12 @@
 ---
 
 ## Milestone Selanjutnya (Next: M8.2 & M8.3)
-- [ ] **Batch M8.2**: Usulan rekening dari 4 digit akhir, aturan belajar dari koreksi (opt-in per baris), penyempurnaan kategorisasi (longest-keyword precedence & source), template standar FinReport (XLSX/CSV download & parser template).
+- [x] **Batch M8.2: Statement Import Enhancements & Standard Template**:
+  - [x] Batch M8.2-0: Strict default rate limit (10/10m), netralkan komentar nomor rekening, sinkronisasi docs technical debt & plan.
+  - [x] Batch M8.2-1: Usulan rekening tujuan dari 4 digit akhir nomor rekening berkas (`suggested_account`).
+  - [x] Batch M8.2-2: Aturan belajar kategori dari koreksi user (`learn_rule: true`, max 500 rules) & endpoint update `PUT /api/category-rules/:id`.
+  - [x] Batch M8.2-3: Penyempurnaan prioritas kategorisasi (longest-keyword precedence & `suggestion_source`).
+  - [x] Batch M8.2-4: Template standar FinReport (allowlist `bankTemplates.js`, `templateGenerator.js`, download endpoint `GET /api/imports/template`, adapter parser `template.js`).
+  - [x] Batch M8.2-5: Extended synthetic test suite (`verify-m8.2.js`) & sinkronisasi dokumentasi proyek.
 - [ ] **Batch M8.3**: Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback), menu UI "Unduh Template" (pilih bank), usulan transfer antar-rekening.
 - [ ] **Batch M8.4**: Adapter e-wallet & parser BCA / PDF (menunggu ketersediaan sampel berkas) & audit keamanan akhir M8.

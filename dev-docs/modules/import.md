@@ -102,13 +102,15 @@ Hierarki penentuan kategori per baris transaksi:
 
 | Method | Endpoint | Deskripsi | Autentikasi |
 |--------|----------|-----------|:-----------:|
-| `POST` | `/api/imports/preview` | Upload berkas & buat preview batch (multipart: `account_id`, `file`, opsional `parser`, `mapping`, `file_password`) | Bearer Token |
-| `POST` | `/api/imports/:id/commit` | Commit batch preview menjadi transaksi aktual (`rows` override: `[{ index, category_id, include }]`). Mengembalikan metrik `imported_rows`, `duplicate_rows`, dan `skipped_rows` | Bearer Token |
-| `DELETE` | `/api/imports/:id` | Rollback batch berstatus COMMITTED | Bearer Token |
+| `POST` | `/api/imports/preview` | Upload berkas & buat preview batch (multipart: `account_id`, `file`, opsional `parser`, `mapping`, `file_password`). Menghasilkan `suggested_account`, `suggested_keyword`, `suggestion_source`, dan `summary.invalid` | Bearer Token |
+| `POST` | `/api/imports/:id/commit` | Commit batch preview menjadi transaksi aktual (`rows` override: `[{ index, category_id, include, learn_rule, keyword }]`). Mengembalikan metrik `imported_rows`, `duplicate_rows`, `skipped_rows`, `rules_saved`, dan `rule_warnings` | Bearer Token |
+| `DELETE` | `/api/imports/:id` | Rollback batch berstatus COMMITTED (tidak menghapus aturan kategori yang tersimpan) | Bearer Token |
+| `GET` | `/api/imports/template` | Unduh berkas template standar FinReport (`?bank=...&format=xlsx|csv`) | Bearer Token |
 | `GET` | `/api/imports` | Daftar riwayat batch pengguna | Bearer Token |
 | `GET` | `/api/imports/:id` | Detail batch import | Bearer Token |
 | `GET` | `/api/category-rules` | Daftar aturan kata kunci kategori pengguna | Bearer Token |
 | `POST` | `/api/category-rules` | Tambah aturan kata kunci kategori (`keyword`, `category_id`) | Bearer Token |
+| `PUT` | `/api/category-rules/:id` | Ubah aturan kata kunci kategori (`keyword`, `category_id`) dengan proteksi unik per pengguna | Bearer Token |
 | `DELETE` | `/api/category-rules/:id` | Hapus aturan kata kunci | Bearer Token |
 
 > **Metrik Hasil Commit:**

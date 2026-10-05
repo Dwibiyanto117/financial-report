@@ -5,11 +5,24 @@ Versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
-## [Unreleased]
+## [0.5.0] — 2026-10-06
 
-### Planned
-- **Batch M8.2**: Parser adapter BCA dan penyempurnaan rule kategori.
-- **Batch M8.3**: Frontend UI `/import` (dropzone, password dialog, tabel review, tab riwayat & rollback).
+### Added
+- **Usulan Rekening Tujuan (4 Digit Akhir)**:
+  - Pada pratinjau import mutasi, sistem mencocokkan nomor rekening berkas (`parseResult.meta.accountNumberMasked`) dengan 4 digit akhir rekening aktif pengguna.
+  - Jika tepat satu rekening cocok, dikembalikan `suggested_account: { id, name, institution, match: "last4" }`. Jika ambigu atau tidak cocok, diberikan peringatan non-blocking tanpa membatalkan pratinjau.
+- **Aturan Belajar Kategori (Learn Rule) & Edit Aturan**:
+  - Pratinjau menyertakan kandidat kata kunci per baris (`suggested_keyword`) yang diekstrak lewat helper `deriveKeyword()`.
+  - Pilihan opt-in `learn_rule: true` per baris saat commit untuk menyimpan aturan kata kunci ke `category_rules` secara atomik di dalam `$transaction` yang sama (maksimum 500 aturan per pengguna).
+  - Endpoint baru `PUT /api/category-rules/:id` untuk mengubah `keyword` dan `category_id` dengan validasi integer positif dan penanganan tabrakan UNIQUE yang bersih (HTTP 400).
+- **Penyempurnaan Prioritas Kategorisasi**:
+  - Aturan kustom pengguna diurutkan dengan prioritas **keyword terpanjang menang** (longest keyword precedence), disusul aturan kata kunci bawaan sistem yang diperluas, dan fallback kategori bertipe sama.
+  - Metrik `suggestion_source` (`"template" | "user_rule" | "builtin" | "fallback"`) untuk transparansi asal rekomendasi kategori.
+- **Template Standar FinReport**:
+  - Endpoint `GET /api/imports/template` untuk mengunduh template standar XLSX dan CSV untuk institusi yang didukung (`BCA`, `MANDIRI`, `BRI`, `BNI`, `CIMB`, `JAGO`, `DANA`, `OVO`, `GOPAY`, `LAINNYA`).
+  - Berkas XLSX dilengkapi sheet `Mutasi` (header dibekukan, dropdown Jenis), sheet `Info` (`FINREPORT-IMPORT-V1`), dan sheet `Petunjuk`.
+  - Parser adapter `template` (`parsers/template.js`) dengan deteksi skor 1.0 (info sheet) dan 0.9 (header mutasi standar), parsing tanggal komponen UTC bebas pergeseran timezone, dan pelaporan `summary.invalid`.
+- **Suite Pengujian M8.2**: Skrip verifikasi mandiri `backend/scripts/verify-m8.2.js` mencakup 7 skenario pengujian komprehensif.
 
 ---
 
