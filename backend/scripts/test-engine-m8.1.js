@@ -7,6 +7,7 @@
 
 import assert from "assert";
 import fs from "fs";
+import path from "path";
 import prisma from "../src/config/prisma.js";
 import { suggestCategoryId, loadCategoriesForUser, loadUserCategoryRules } from "../src/services/import/categorizer.js";
 import * as importService from "../src/services/import/import.service.js";
@@ -78,17 +79,15 @@ async function runTest() {
   await categoryRuleService.deleteCategoryRule(testUser.id, customRule.id);
   console.log("OK - CategoryRule CRUD & override priority");
 
-  // 4. Uji Preview -> Commit -> Rollback pada sample Mandiri
-  const samplePath =
-    process.env.MANDIRI_SAMPLE_PATH ||
-    "C:\\Users\\DW\\Downloads\\e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx";
+  // 4. Uji Preview -> Commit -> Rollback pada sample Mandiri (opsional jika MANDIRI_SAMPLE_PATH diset)
+  const samplePath = process.env.MANDIRI_SAMPLE_PATH;
   const password = process.env.MANDIRI_SAMPLE_PASSWORD;
 
-  if (fs.existsSync(samplePath) && password) {
+  if (samplePath && fs.existsSync(samplePath) && password) {
     const fileBuf = fs.readFileSync(samplePath);
     const mockFile = {
       buffer: fileBuf,
-      originalname: "e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx",
+      originalname: path.basename(samplePath),
       size: fileBuf.length,
       mimetype: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     };

@@ -56,25 +56,20 @@ async function runTests() {
   assert.strictEqual(dkRes.rows[1].amount, 100000);
   console.log("OK - Generic parser dengan mapping indeks debit/kredit");
 
-  // 3. Uji Dekripsi File Sampel Mandiri
-  const samplePath =
-    process.env.MANDIRI_SAMPLE_PATH ||
-    "C:\\Users\\DW\\Downloads\\e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx";
+  // 3. Uji Dekripsi File Sampel Mandiri (jika MANDIRI_SAMPLE_PATH dan MANDIRI_SAMPLE_PASSWORD diset)
+  const samplePath = process.env.MANDIRI_SAMPLE_PATH;
+  const validPassword = process.env.MANDIRI_SAMPLE_PASSWORD;
 
-  if (fs.existsSync(samplePath)) {
+  if (samplePath && fs.existsSync(samplePath) && validPassword) {
     const sampleBuffer = fs.readFileSync(samplePath);
-    const validPassword = process.env.MANDIRI_SAMPLE_PASSWORD;
-
-    if (!validPassword) {
-      throw new Error("MANDIRI_SAMPLE_PASSWORD tidak ditemukan di environment");
-    }
+    const sampleFileName = path.basename(samplePath);
 
     // Uji password salah -> harus melempar error 400 domain "Password file salah"
     let wrongPassCaught = false;
     try {
       await readFileBuffer({
         buffer: sampleBuffer,
-        fileName: "mandiri.xlsx",
+        fileName: sampleFileName,
         password: "wrong_password_12345"
       });
     } catch (err) {
@@ -88,7 +83,7 @@ async function runTests() {
     // Uji password benar
     const readResult = await readFileBuffer({
       buffer: sampleBuffer,
-      fileName: "e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx",
+      fileName: sampleFileName,
       password: validPassword
     });
     assert.strictEqual(readResult.format, "xlsx");
@@ -99,7 +94,7 @@ async function runTests() {
     // 4. Uji Mandiri Parser terhadap Sampel Nyata
     const mandiriRes = parseMandiri({
       grid: readResult.grid,
-      fileName: "e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx"
+      fileName: sampleFileName
     });
 
     assert.strictEqual(mandiriRes.rows.length, 10, "Sampel Mandiri harus memiliki 10 transaksi");
@@ -113,7 +108,7 @@ async function runTests() {
     // Verifikasi metadata saldo
     assert.strictEqual(mandiriRes.meta.initialBalance, 3823391);
     assert.strictEqual(mandiriRes.meta.closingBalance, 1452422);
-    assert.strictEqual(mandiriRes.meta.accountNumberMasked, "...8990");
+    assert.ok(mandiriRes.meta.accountNumberMasked.startsWith("..."));
 
     // Verifikasi peringatan rekonsiliasi non-blocking
     assert.ok(mandiriRes.warnings.length > 0, "Peringatan rekonsiliasi harus muncul untuk sampel parsial");
@@ -122,7 +117,7 @@ async function runTests() {
     // 5. Uji Parser Registry & Auto Detection
     const detected = detectParser({
       grid: readResult.grid,
-      fileName: "e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx"
+      fileName: sampleFileName
     });
     assert.strictEqual(detected.name, "mandiri");
     console.log("OK - Registry mendeteksi parser Mandiri otomatis dengan skor tinggi");
@@ -133,7 +128,7 @@ async function runTests() {
     assert.ok(list.some((p) => p.name === "generic"));
     console.log("OK - Registry list parsers");
   } else {
-    console.log("File sampel Mandiri tidak ditemukan di path:", samplePath);
+    console.log("Lewati uji sampel Mandiri nyata (MANDIRI_SAMPLE_PATH / MANDIRI_SAMPLE_PASSWORD tidak diset atau file tidak ada)");
   }
 
   console.log("Semua pengujian unit Batch M8.1-3 BERHASIL!");

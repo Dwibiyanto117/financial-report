@@ -19,20 +19,19 @@ const BASE_URL = process.env.API_BASE_URL || "http://localhost:5000/api";
 const TEST_EMAIL = process.env.M8_TEST_EMAIL || "m8test@example.com";
 const TEST_PASSWORD = process.env.M8_TEST_PASSWORD;
 const MANDIRI_PASSWORD = process.env.MANDIRI_SAMPLE_PASSWORD;
-const MANDIRI_PATH =
-  process.env.MANDIRI_SAMPLE_PATH ||
-  "C:\\Users\\DW\\Downloads\\e-Statement_XXXXXXXXX8990_01 Agu 2026-31 Agu 2026.xlsx";
+const MANDIRI_PATH = process.env.MANDIRI_SAMPLE_PATH;
 
 if (!TEST_PASSWORD) {
   console.error("ERROR: M8_TEST_PASSWORD belum diset di environment");
   process.exit(1);
 }
-if (!MANDIRI_PASSWORD) {
-  console.error("ERROR: MANDIRI_SAMPLE_PASSWORD belum diset di environment");
-  process.exit(1);
+if (!MANDIRI_PATH || !fs.existsSync(MANDIRI_PATH)) {
+  console.log("INFO: MANDIRI_SAMPLE_PATH tidak diset atau berkas tidak ditemukan.");
+  console.log("Untuk menjalankan verifikasi dengan data sintetis, gunakan backend/scripts/verify-m8.1-synthetic.js.");
+  process.exit(0);
 }
-if (!fs.existsSync(MANDIRI_PATH)) {
-  console.error("ERROR: File sampel Mandiri tidak ditemukan di:", MANDIRI_PATH);
+if (!MANDIRI_PASSWORD) {
+  console.error("ERROR: MANDIRI_SAMPLE_PASSWORD belum diset di environment saat MANDIRI_SAMPLE_PATH diset");
   process.exit(1);
 }
 
