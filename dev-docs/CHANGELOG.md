@@ -16,6 +16,12 @@ Versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [0.4.0] — 2026-10-05
 
 ### Added
+- **M8.1 Hardening & Optimization**:
+  - `commit` bulk insert menggunakan `prisma.transaction.createMany({ skipDuplicates: true })` dengan explicit timeout 30 detik untuk menghindari transaksi lambat pada 2000 baris.
+  - Perhitungan `duplicate_rows` akurat (duplikasi preview + tabrakan fingerprint saat insert) dan penambahan field respons `skipped_rows`.
+  - Utility `parsePositiveInt` di `backend/src/utils/query.js` untuk validasi integer 32-bit positif ketat pada seluruh parameter dan payload ID M8.1 (`account_id`, `:id`, `category_id`), mencegah dump query Prisma ke klien.
+  - Skrip generator data sintetis mandiri `backend/scripts/seed-m8-testdata.js` dan suite pengujian verifikasi komprehensif `backend/scripts/verify-m8.1-synthetic.js`.
+  - Sanitasi skrip uji dari jalur privat dan nomor rekening asli; mewajibkan env `MANDIRI_SAMPLE_PATH` tanpa default fallback.
 - **Database Schema**: Enum `ImportStatus` (`PREVIEW`, `COMMITTED`, `CANCELLED`), tabel `import_batches` dan `category_rules`, serta penambahan `import_batch_id` dan `import_fingerprint` dengan constraint `UNIQUE(account_id, import_fingerprint)` pada tabel `transactions`.
 - **Import Utilitas**: `normalize.js` (parsing angka format ID & EN, tanggal/waktu fleksibel, sanitasi awalan formula `= + - @`) dan `fingerprint.js` (hash SHA-256 deduplikasi transaksi).
 - **Parser Adapter Engine**:

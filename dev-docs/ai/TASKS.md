@@ -78,6 +78,13 @@
 - [x] Endpoint REST API & Upload: `/api/imports/preview`, `/api/imports/:id/commit`, `/api/imports/:id` (rollback), `/api/imports` (history), `/api/category-rules`.
 - [x] Keamanan upload: Multer memoryStorage, batas 5 MB, batas 2000 baris, rate limit 10/10m.
 - [x] Skrip verifikasi 8 skenario wajib (`backend/scripts/verify-m8.1.js`) lulus 100%.
+- [x] **Hardening M8.1 (Batch M8.1-H1 s/d H6)**:
+  - [x] H1: `commit` batch dengan `createMany` + `skipDuplicates: true` & timeout eksplisit 30 detik (2000 baris ~230 ms).
+  - [x] H2: Perhitungan `duplicate_rows` akurat & penambahan `skipped_rows` di respons commit.
+  - [x] H3: Validasi ketat integer positif (`parsePositiveInt`) pada rute dan parameter import / category-rules.
+  - [x] H4: Sanitasi skrip uji dari jalur privat dan nomor rekening nyata.
+  - [x] H5: Dokumentasi technical debt (TD-004 s/d TD-007) di `dev-docs/ai/TECHNICAL_DEBT.md`.
+  - [x] H6: Data uji sintetis mandiri (`seed-m8-testdata.js`) & extended verification (`verify-m8.1-synthetic.js`) lulus 100%.
 
 ---
 

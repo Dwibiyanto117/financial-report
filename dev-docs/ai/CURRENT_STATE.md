@@ -155,15 +155,12 @@ Pondasi backend untuk modul Statement Import (MOD-08) selesai diimplementasikan 
   - Rute `/api/category-rules` (GET, POST, DELETE).
   - Isolasi data pengguna: seluruh query difilter `userId` dan kepemilikan rekening divalidasi.
   - Zero-logging kredensial: password berkas tidak pernah dicatat pada log atau disimpan permanen.
-- [x] **Verifikasi Runtime Lengkap (`backend/scripts/verify-m8.1.js`)**:
-  - 8 skenario wajib lulus 100% terhadap API dan MySQL nyata:
-    1. Preview sampel nyata Mandiri dengan password benar -> 10 transaksi terparse akurat beserta jam dan keterangan.
-    2. Preview dengan password salah -> HTTP 400 pesan jelas ("Password file salah").
-    3. Preview berkas XLSX tidak terenkripsi -> berjalan normal.
-    4. Commit batch -> 10 transaksi tercipta atomik, saldo rekening dan dashboard summary terbarui.
-    5. Preview ulang berkas yang sama -> seluruh 10 baris terdeteksi sebagai duplikat via fingerprint.
-    6. Rollback batch -> seluruh transaksi batch terhapus atomik, saldo kembali normal.
-    7. Rekonsiliasi -> peringatan selisih muncul tanpa memblokir proses.
-    8. Akses rekening user lain -> ditolak HTTP 404 tanpa kebocoran data.
-  - Uji batas keamanan: penolakan berkas > 5 MB, penolakan ekstensi tidak didukung (.txt), penolakan > 2000 baris transaksi.
+- [x] **M8.1 Hardening & Extended Synthetic Verification**:
+  - `commit` batch menggunakan `createMany` + `skipDuplicates: true` dengan timeout eksplisit 30 detik pada `$transaction` (pengujian 2000 baris tereksekusi dalam ~230 ms).
+  - Pemotongan otomatis `description` ke 255 karakter sebelum insert.
+  - Perhitungan `duplicate_rows` akurat dan pengembalian baris non-duplikat yang tidak dipilih user sebagai `skipped_rows`.
+  - Validasi ketat integer positif 32-bit (`parsePositiveInt`) pada semua parameter M8 (`account_id`, `id`, `category_id`), menolak string non-numerik dan angka float dengan HTTP 400 bersih tanpa dump query Prisma.
+  - Sanitasi menyeluruh terhadap skrip pengujian dari jalur file lokal absolut dan digit rekening nyata.
+  - Dokumentasi teknis terpusat di `dev-docs/ai/TECHNICAL_DEBT.md` (TD-004 s/d TD-007).
+  - Generator berkas uji sintetis mandiri (`backend/scripts/seed-m8-testdata.js`) dan test suite extended (`backend/scripts/verify-m8.1-synthetic.js`) lulus 11 skenario 100%.
 
