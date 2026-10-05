@@ -10,6 +10,8 @@ import categoryRoutes from "./routes/category.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import reportRoutes from "./routes/report.routes.js";
+import importRoutes from "./routes/import.routes.js";
+import categoryRuleRoutes from "./routes/categoryRule.routes.js";
 
 dotenv.config();
 
@@ -41,6 +43,8 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/imports", importRoutes);
+app.use("/api/category-rules", categoryRuleRoutes);
 
 // Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
