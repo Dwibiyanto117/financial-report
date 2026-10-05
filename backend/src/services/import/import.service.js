@@ -144,6 +144,9 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
     loadUserCategoryRules(userId)
   ]);
 
+  // Warnings akumulasi dari parser dan validasi preview
+  const warnings = Array.isArray(parseResult.warnings) ? [...parseResult.warnings] : [];
+
   // Pelacakan urutan transaksi identik dalam satu hari
   const occurrenceTracker = new Map();
   const seenInBatch = new Set();
