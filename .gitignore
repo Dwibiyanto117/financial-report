@@ -29,3 +29,4 @@ Thumbs.db
 # Temporary docs & AI scratchpad
 /dev-docs/temp/
 /.commandcode/
+/.claude/
