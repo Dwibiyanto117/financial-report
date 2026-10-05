@@ -9,9 +9,10 @@ import rateLimit from "express-rate-limit";
 
 export const importUploadLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 menit
-  max: 10, // Maksimal 10 upload per 10 menit per user / IP
+  max: process.env.NODE_ENV === "production" ? 10 : 200, // 200 di dev/test, 10 di prod
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
   keyGenerator: (req) => {
     // Utamakan userId jika terotentikasi, fallback ke IP
     return req.user && req.user.id ? `import_user_${req.user.id}` : `import_ip_${req.ip}`;
