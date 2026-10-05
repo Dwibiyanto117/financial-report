@@ -149,3 +149,39 @@ export const getImportById = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/imports/template?bank=<KODE>&format=xlsx|csv
+ * Mengunduh berkas template mutasi standar FinReport.
+ */
+export const downloadTemplate = async (req, res, next) => {
+  try {
+    const rawBank = req.query.bank || "LAINNYA";
+    const rawFormat = req.query.format || "xlsx";
+    const format = String(rawFormat).trim().toLowerCase();
+
+    if (!["xlsx", "csv"].includes(format)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format template tidak valid. Pilihan yang didukung: "xlsx" atau "csv"'
+      });
+    }
+
+    const { generateXlsxTemplate, generateCsvTemplate } = await import(
+      "../services/import/templates/templateGenerator.js"
+    );
+
+    let result;
+    if (format === "csv") {
+      result = generateCsvTemplate(rawBank);
+    } else {
+      result = await generateXlsxTemplate(rawBank);
+    }
+
+    res.setHeader("Content-Type", result.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${result.fileName}"`);
+    return res.status(200).send(result.buffer);
+  } catch (error) {
+    next(error);
+  }
+};
+

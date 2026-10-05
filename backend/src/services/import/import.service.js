@@ -102,6 +102,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
   } else {
     parserModule = detectParser({
       grid: fileData.grid,
+      sheets: fileData.sheets || null,
       fileName: file.originalname,
       mapping: resolvedMapping
     });
@@ -110,6 +111,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
   // Parse grid menjadi baris transaksi
   const parseResult = parserModule.parse({
     grid: fileData.grid,
+    sheets: fileData.sheets || null,
     fileName: file.originalname,
     mapping: resolvedMapping
   });
@@ -178,18 +180,37 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
       seenInBatch.add(fingerprint);
     }
 
-    const categorySuggestion = suggestCategory({
-      description: rawRow.description,
-      type: rawRow.type,
-      userRules,
-      categories
-    });
+    let suggestedCategoryId = null;
+    let suggestionSource = null;
 
-    const suggestedCategoryId = rawRow.suggested_category_id !== undefined
-      ? rawRow.suggested_category_id
-      : categorySuggestion.categoryId;
+    // Prioritas 1: Kategori eksplisit dari template (jika ditulis user di berkas)
+    if (rawRow.explicitCategoryName) {
+      const explicitNorm = String(rawRow.explicitCategoryName).trim().toLowerCase();
+      const matchedExplicit = categories.find(
+        (c) => c.type === rawRow.type && c.name.toLowerCase() === explicitNorm
+      );
 
-    const suggestionSource = rawRow.suggestion_source || categorySuggestion.source;
+      if (matchedExplicit) {
+        suggestedCategoryId = matchedExplicit.id;
+        suggestionSource = "template";
+      } else {
+        warnings.push(
+          `Baris ${rawRow.index}: Kategori "${rawRow.explicitCategoryName}" tidak ditemukan atau tipenya tidak cocok (${rawRow.type}), dialihkan ke usulan otomatis`
+        );
+      }
+    }
+
+    // Jika belum ditentukan dari template, jalankan hierarki suggestCategory normal
+    if (!suggestedCategoryId) {
+      const categorySuggestion = suggestCategory({
+        description: rawRow.description,
+        type: rawRow.type,
+        userRules,
+        categories
+      });
+      suggestedCategoryId = categorySuggestion.categoryId;
+      suggestionSource = categorySuggestion.source;
+    }
 
     const suggestedKeyword = deriveKeyword(rawRow.description);
 
@@ -213,7 +234,6 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
   const newCount = total - duplicateCount;
 
   // Evaluasi usulan rekening tujuan dari 4 digit akhir nomor rekening berkas
-  const warnings = [...(parseResult.warnings || [])];
   let suggestedAccount = null;
 
   const rawMasked = parseResult.meta && parseResult.meta.accountNumberMasked;
@@ -274,6 +294,16 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
     }
   });
 
+  const summary = {
+    total,
+    duplicate: duplicateCount,
+    new: newCount
+  };
+
+  if (parseResult.summary && parseResult.summary.invalid !== undefined) {
+    summary.invalid = parseResult.summary.invalid;
+  }
+
   return {
     batch_id: batch.id,
     parser: parserModule.name,
@@ -281,11 +311,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
     meta: parseResult.meta || {},
     warnings,
     suggested_account: suggestedAccount,
-    summary: {
-      total,
-      duplicate: duplicateCount,
-      new: newCount
-    },
+    summary,
     rows: processedRows.map((r) => ({
       index: r.index,
       date: r.date,

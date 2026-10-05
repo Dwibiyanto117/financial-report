@@ -224,12 +224,19 @@ export async function readFileBuffer({ buffer, fileName, password = null }) {
       throw error;
     }
 
-    const firstSheet = workbook.worksheets[0];
-    const grid = worksheetToGrid(firstSheet);
+    const sheets = {};
+    for (const ws of workbook.worksheets) {
+      sheets[ws.name] = worksheetToGrid(ws);
+    }
+
+    // Default grid: sheet 'Mutasi' jika ada, fallback ke sheet pertama
+    const mutasiSheet = workbook.getWorksheet("Mutasi") || workbook.worksheets[0];
+    const grid = worksheetToGrid(mutasiSheet);
 
     return {
       format: "xlsx",
       grid,
+      sheets,
       rawBuffer: workingBuffer,
       isEncrypted
     };

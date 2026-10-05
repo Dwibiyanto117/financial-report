@@ -5,10 +5,12 @@
  * serta mendeteksi parser yang paling cocok berdasarkan skor keyakinan (confidence).
  */
 
+import * as templateParser from "./template.js";
 import * as mandiriParser from "./mandiri.js";
 import * as genericParser from "./generic.js";
 
 const PARSERS = {
+  [templateParser.name]: templateParser,
   [mandiriParser.name]: mandiriParser,
   [genericParser.name]: genericParser
 };

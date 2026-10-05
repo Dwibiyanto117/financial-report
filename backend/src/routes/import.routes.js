@@ -21,6 +21,9 @@ router.post("/:id/commit", importController.commitImport);
 // Rollback batch yang telah di-commit
 router.delete("/:id", importController.rollbackImport);
 
+// Unduh berkas template mutasi standar FinReport
+router.get("/template", importController.downloadTemplate);
+
 // Riwayat & Detail batch import
 router.get("/", importController.getImports);
 router.get("/:id", importController.getImportById);
