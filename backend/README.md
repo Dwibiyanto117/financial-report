@@ -89,3 +89,4 @@ backend/
 | Transactions | CRUD transaksi keuangan & filter per-rekening | Production |
 | Dashboard | Agregasi saldo multi-rekening, komposisi & tren | Production |
 | Reports | Generator ekspor Excel & PDF dengan kolom Rekening | Production |
+| Statement Import | Pipeline import mutasi (Mandiri, Generic, Standard Template), fingerprint dedup & rules | Production |
