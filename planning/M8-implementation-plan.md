@@ -10,7 +10,7 @@
 
 1. `git pull` di branch `dev`.
 2. Batch M8.1 (core backend, skema, parser Mandiri & Generic) dan **Batch M8.2** (usulan rekening 4 digit akhir, belajar aturan kategori, prioritas keyword terpanjang, download template dan adapter parser template) sudah selesai dan lulus verifikasi 100%.
-3. Lanjutkan ke **Batch M8.3** (Frontend UI `/import` dan menu download template).
+3. Lanjutkan ke **Batch M8.3** (Frontend UI `/import` dan menu download template). Rencana rinci dan perbaikan hasil review ada di `planning/M8.3-implementation-plan.md`; mulai dari Batch M8.3-0.
 
 ---
 

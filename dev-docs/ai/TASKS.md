@@ -96,5 +96,5 @@
   - [x] Batch M8.2-3: Penyempurnaan prioritas kategorisasi (longest-keyword precedence & `suggestion_source`).
   - [x] Batch M8.2-4: Template standar FinReport (allowlist `bankTemplates.js`, `templateGenerator.js`, download endpoint `GET /api/imports/template`, adapter parser `template.js`).
   - [x] Batch M8.2-5: Extended synthetic test suite (`verify-m8.2.js`) & sinkronisasi dokumentasi proyek.
-- [ ] **Batch M8.3**: Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback), menu UI "Unduh Template" (pilih bank), usulan transfer antar-rekening.
+- [ ] **Batch M8.3** (rencana lengkap: `planning/M8.3-implementation-plan.md`; mulai dari Batch M8.3-0, perbaikan hasil review M8.2): Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback), menu UI "Unduh Template" (pilih bank), usulan transfer antar-rekening.
 - [ ] **Batch M8.4**: Adapter e-wallet & parser BCA / PDF (menunggu ketersediaan sampel berkas) & audit keamanan akhir M8.
