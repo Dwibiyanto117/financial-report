@@ -199,6 +199,52 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
   const total = processedRows.length;
   const newCount = total - duplicateCount;
 
+  // Evaluasi usulan rekening tujuan dari 4 digit akhir nomor rekening berkas
+  const warnings = [...(parseResult.warnings || [])];
+  let suggestedAccount = null;
+
+  const rawMasked = parseResult.meta && parseResult.meta.accountNumberMasked;
+  if (rawMasked) {
+    const fileDigitsMatch = String(rawMasked).replace(/\D/g, "");
+    if (fileDigitsMatch.length >= 4) {
+      const fileLast4 = fileDigitsMatch.slice(-4);
+
+      // Cari seluruh rekening aktif (non-arsip) milik pengguna
+      const userAccounts = await prisma.account.findMany({
+        where: { userId, isArchived: false },
+        select: { id: true, name: true, institution: true, accountNoMasked: true }
+      });
+
+      const matchedAccounts = userAccounts.filter((acc) => {
+        if (!acc.accountNoMasked) return false;
+        const accDigits = String(acc.accountNoMasked).replace(/\D/g, "");
+        return accDigits.length >= 4 && accDigits.slice(-4) === fileLast4;
+      });
+
+      if (matchedAccounts.length === 1) {
+        suggestedAccount = {
+          id: matchedAccounts[0].id,
+          name: matchedAccounts[0].name,
+          institution: matchedAccounts[0].institution,
+          match: "last4"
+        };
+      }
+
+      // Verifikasi apakah rekening terpilih cocok dengan 4 digit akhir berkas
+      const selectedDigits = account.accountNoMasked
+        ? String(account.accountNoMasked).replace(/\D/g, "")
+        : "";
+      const selectedMatches =
+        selectedDigits.length >= 4 && selectedDigits.slice(-4) === fileLast4;
+
+      if (!selectedMatches) {
+        warnings.push(
+          `Nomor rekening pada berkas (...${fileLast4}) tidak cocok dengan rekening yang dipilih`
+        );
+      }
+    }
+  }
+
   // Simpan ImportBatch ke database berstatus PREVIEW
   // Payload tidak memuat password maupun berkas biner mentah
   const batch = await prisma.importBatch.create({
@@ -220,7 +266,8 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
     parser: parserModule.name,
     file_name: file.originalname,
     meta: parseResult.meta || {},
-    warnings: parseResult.warnings || [],
+    warnings,
+    suggested_account: suggestedAccount,
     summary: {
       total,
       duplicate: duplicateCount,
