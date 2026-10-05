@@ -30,16 +30,16 @@
 
 | Kode | Output |
 |------|--------|
-| M8.1 | Pipeline import: skema, parser `generic`, preview/commit, fingerprint, rollback |
-| M8.2 | Adapter BCA dan Mandiri, category rules |
-| M8.3 | UI `/import`, riwayat |
-| M8.4 | Adapter Dana/OVO/GoPay, uji file nyata, audit keamanan upload |
+| M8.1 | Pipeline import: skema, parser `generic` dan `mandiri`, preview/commit, fingerprint, rollback, hardening (Selesai v0.4.0) |
+| M8.2 | Usulan rekening dari 4 digit akhir, aturan belajar dari koreksi (opt-in), penyempurnaan kategorisasi, template standar FinReport (XLSX/CSV) |
+| M8.3 | UI `/import` (dropzone, password dialog, review, riwayat, rollback), menu UI "Unduh Template", usulan transfer antar-rekening |
+| M8.4 | Adapter e-wallet & parser BCA / PDF (menunggu ketersediaan sampel berkas) |
 
 ---
 
 ## 4. Temuan Sampel Mandiri (sudah diverifikasi, bukan asumsi)
 
-File: `e-Statement_XXXXXXXXX9456_01 Agu 2026-31 Agu 2026 Sample.xlsx` (27 KB, terenkripsi).
+File: `e-Statement_XXXXXXXXXXXXX_01 Agu 2026-31 Agu 2026 Sample.xlsx` (27 KB, terenkripsi).
 
 | Aspek | Temuan |
 |-------|--------|

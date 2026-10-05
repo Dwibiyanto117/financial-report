@@ -215,7 +215,7 @@ export function parse(ctx) {
   const { headerIndex, colDate, colDesc, colIncome, colExpense, colBalance } = findTableHeaders(grid);
   const meta = extractMetadata(grid, headerIndex);
 
-  // Jika nomor rekening belum didapat dari metadata, coba ambil dari pola nama file: e-Statement_XXXXXXXXX8990
+  // Fallback: ambil 4 digit terakhir dari pola nama file e-Statement_XXXXXXXXX<4 digit akhir>
   if (!meta.accountNumberMasked) {
     const fileMatch = fileName.match(/_X+(\d{4})/i);
     if (fileMatch) {

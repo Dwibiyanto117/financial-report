@@ -89,6 +89,6 @@
 ---
 
 ## Milestone Selanjutnya (Next: M8.2 & M8.3)
-- [ ] **Batch M8.2**: Parser adapter BCA (jika sampel tersedia) dan penyempurnaan rule kategori.
-- [ ] **Batch M8.3**: Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback).
-- [ ] **Batch M8.4**: Adapter e-wallet (jika didukung) & sinkronisasi dokumentasi akhir M8.
+- [ ] **Batch M8.2**: Usulan rekening dari 4 digit akhir, aturan belajar dari koreksi (opt-in per baris), penyempurnaan kategorisasi (longest-keyword precedence & source), template standar FinReport (XLSX/CSV download & parser template).
+- [ ] **Batch M8.3**: Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback), menu UI "Unduh Template" (pilih bank), usulan transfer antar-rekening.
+- [ ] **Batch M8.4**: Adapter e-wallet & parser BCA / PDF (menunggu ketersediaan sampel berkas) & audit keamanan akhir M8.

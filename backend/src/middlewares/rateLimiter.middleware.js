@@ -7,9 +7,17 @@
 
 import rateLimit from "express-rate-limit";
 
+const parseRateLimitMax = () => {
+  const envVal = process.env.IMPORT_RATE_LIMIT_MAX;
+  if (envVal && /^[1-9]\d*$/.test(String(envVal).trim())) {
+    return Number(envVal);
+  }
+  return 10;
+};
+
 export const importUploadLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 menit
-  max: process.env.NODE_ENV === "production" ? 10 : 200, // 200 di dev/test, 10 di prod
+  max: parseRateLimitMax, // Bawaan ketat: 10 upload per 10 menit; konfigurasi lewat IMPORT_RATE_LIMIT_MAX
   standardHeaders: true,
   legacyHeaders: false,
   validate: { keyGeneratorIpFallback: false },
