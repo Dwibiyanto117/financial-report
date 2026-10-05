@@ -289,78 +289,82 @@ export async function commit({ userId, batchId, rows = [] }) {
   const categories = await loadCategoriesForUser(userId);
 
   // Eksekusi seluruh operasi commit dalam SATU transaksi database atomic
-  return await prisma.$transaction(async (tx) => {
-    let importedCount = 0;
-    let duplicateCount = 0;
+  return await prisma.$transaction(
+    async (tx) => {
+      const transactionsToInsert = [];
 
-    for (const r of payloadRows) {
-      const override = overrideMap.get(r.index);
+      for (const r of payloadRows) {
+        const override = overrideMap.get(r.index);
 
-      // Baris tidak disebut -> include = true kecuali duplikat (default false)
-      let shouldInclude = !r.is_duplicate;
-      if (override && override.include !== undefined) {
-        shouldInclude = Boolean(override.include);
-      }
+        // Baris tidak disebut -> include = true kecuali duplikat (default false)
+        let shouldInclude = !r.is_duplicate;
+        if (override && override.include !== undefined) {
+          shouldInclude = Boolean(override.include);
+        }
 
-      if (!shouldInclude) {
-        continue;
-      }
-
-      // Kategori: pakai override jika ada, jika tidak pakai saran preview
-      let catId = override && override.category_id !== undefined ? Number(override.category_id) : r.suggested_category_id;
-
-      // Validasi kecocokan kategori
-      let matchedCategory = categories.find((c) => c.id === catId);
-      if (!matchedCategory || matchedCategory.type !== r.type) {
-        const fallback = findFallbackCategory(categories, r.type);
-        catId = fallback ? fallback.id : null;
-      }
-
-      try {
-        await tx.transaction.create({
-          data: {
-            userId,
-            accountId: batch.accountId,
-            categoryId: catId,
-            type: r.type,
-            amount: r.amount,
-            currency: "IDR",
-            transactionDate: new Date(`${r.date}T00:00:00.000Z`),
-            description: r.description || null,
-            importBatchId: batch.id,
-            importFingerprint: r.fingerprint
-          }
-        });
-        importedCount++;
-      } catch (err) {
-        // Tangani race condition unique constraint violation (P2002)
-        if (err.code === "P2002") {
-          duplicateCount++;
+        if (!shouldInclude) {
           continue;
         }
-        throw err;
-      }
-    }
 
-    // Perbarui status batch menjadi COMMITTED dan bersihkan parsedPayload
-    const updatedBatch = await tx.importBatch.update({
-      where: { id: batch.id },
-      data: {
-        status: "COMMITTED",
-        importedRows: importedCount,
-        duplicateRows: duplicateCount + (batch.totalRows - (importedCount + duplicateCount)),
-        parsedPayload: null
-      }
-    });
+        // Kategori: pakai override jika ada, jika tidak pakai saran preview
+        let catId = override && override.category_id !== undefined ? Number(override.category_id) : r.suggested_category_id;
 
-    return {
-      batch_id: updatedBatch.id,
-      status: updatedBatch.status,
-      total_rows: updatedBatch.totalRows,
-      imported_rows: importedCount,
-      duplicate_rows: updatedBatch.duplicateRows
-    };
-  });
+        // Validasi kecocokan kategori
+        let matchedCategory = categories.find((c) => c.id === catId);
+        if (!matchedCategory || matchedCategory.type !== r.type) {
+          const fallback = findFallbackCategory(categories, r.type);
+          catId = fallback ? fallback.id : null;
+        }
+
+        // Potong deskripsi maksimal 255 karakter sebelum disimpan
+        const truncatedDescription = r.description ? String(r.description).slice(0, 255) : null;
+
+        transactionsToInsert.push({
+          userId,
+          accountId: batch.accountId,
+          categoryId: catId,
+          type: r.type,
+          amount: r.amount,
+          currency: "IDR",
+          transactionDate: new Date(`${r.date}T00:00:00.000Z`),
+          description: truncatedDescription,
+          importBatchId: batch.id,
+          importFingerprint: r.fingerprint
+        });
+      }
+
+      let importedCount = 0;
+      if (transactionsToInsert.length > 0) {
+        const createResult = await tx.transaction.createMany({
+          data: transactionsToInsert,
+          skipDuplicates: true
+        });
+        importedCount = createResult.count;
+      }
+
+      const duplicateCollision = transactionsToInsert.length - importedCount;
+
+      // Perbarui status batch menjadi COMMITTED dan bersihkan parsedPayload
+      const updatedBatch = await tx.importBatch.update({
+        where: { id: batch.id },
+        data: {
+          status: "COMMITTED",
+          importedRows: importedCount,
+          duplicateRows: batch.duplicateRows + duplicateCollision,
+          parsedPayload: null
+        }
+      });
+
+      return {
+        batch_id: updatedBatch.id,
+        status: updatedBatch.status,
+        total_rows: updatedBatch.totalRows,
+        imported_rows: importedCount,
+        duplicate_rows: updatedBatch.duplicateRows
+      };
+    },
+    { timeout: 30000, maxWait: 10000 }
+  );
 }
 
 /**
