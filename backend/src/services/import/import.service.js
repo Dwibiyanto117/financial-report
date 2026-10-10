@@ -76,6 +76,24 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
 
   const account = await resolveUserAccount(userId, accountId);
 
+  // Pembersihan malas: batalkan batch PREVIEW milik user yang lebih tua dari 24 jam
+  try {
+    const expiredCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await prisma.importBatch.updateMany({
+      where: {
+        userId,
+        status: "PREVIEW",
+        createdAt: { lt: expiredCutoff }
+      },
+      data: {
+        status: "CANCELLED",
+        parsedPayload: null
+      }
+    });
+  } catch {
+    // Non-blocking: kegagalan pembersihan malas tidak boleh menggagalkan preview pengguna
+  }
+
   // Parse JSON mapping jika dikirim sebagai string form-data
   let resolvedMapping = mapping;
   if (typeof mapping === "string" && mapping.trim().length > 0) {
@@ -561,8 +579,30 @@ export async function rollback({ userId, batchId }) {
     throw error;
   }
 
+  if (batch.status === "PREVIEW") {
+    const updatedBatch = await prisma.importBatch.update({
+      where: { id: batch.id },
+      data: {
+        status: "CANCELLED",
+        parsedPayload: null
+      }
+    });
+    return {
+      batch_id: updatedBatch.id,
+      status: updatedBatch.status,
+      deleted_transactions: 0,
+      message: "Batch preview berhasil dibatalkan"
+    };
+  }
+
+  if (batch.status === "CANCELLED") {
+    const error = new Error("Batch import sudah dibatalkan sebelumnya");
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (batch.status !== "COMMITTED") {
-    const error = new Error(`Hanya batch berstatus COMMITTED yang dapat di-rollback (status saat ini: ${batch.status})`);
+    const error = new Error(`Hanya batch berstatus COMMITTED atau PREVIEW yang dapat dibatalkan (status saat ini: ${batch.status})`);
     error.statusCode = 400;
     throw error;
   }

@@ -185,3 +185,21 @@ export const downloadTemplate = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/imports/template/banks
+ * Mengambil daftar bank dan dompet digital yang didukung untuk template FinReport.
+ */
+export const getTemplateBanks = async (req, res, next) => {
+  try {
+    const { BANK_TEMPLATES } = await import("../services/import/templates/bankTemplates.js");
+    return res.status(200).json({
+      success: true,
+      message: "Daftar template bank berhasil diambil",
+      data: BANK_TEMPLATES
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

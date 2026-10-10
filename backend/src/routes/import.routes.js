@@ -21,6 +21,9 @@ router.post("/:id/commit", importController.commitImport);
 // Rollback batch yang telah di-commit
 router.delete("/:id", importController.rollbackImport);
 
+// Daftar bank allowlist untuk template
+router.get("/template/banks", importController.getTemplateBanks);
+
 // Unduh berkas template mutasi standar FinReport
 router.get("/template", importController.downloadTemplate);
 

@@ -102,9 +102,10 @@ Hierarki penentuan kategori per baris transaksi:
 
 | Method | Endpoint | Deskripsi | Autentikasi |
 |--------|----------|-----------|:-----------:|
-| `POST` | `/api/imports/preview` | Upload berkas & buat preview batch (multipart: `account_id`, `file`, opsional `parser`, `mapping`, `file_password`). Menghasilkan `suggested_account`, `suggested_keyword`, `suggestion_source`, dan `summary.invalid` | Bearer Token |
+| `POST` | `/api/imports/preview` | Upload berkas & buat preview batch (multipart: `account_id`, `file`, opsional `parser`, `mapping`, `file_password`). Menghasilkan `suggested_account`, `suggested_keyword`, `suggestion_source`, dan `summary.invalid`. Jika berkas butuh password, merespons HTTP 400 dengan `errors: [{ field: "file_password" }]`. Melakukan pembersihan malas batch PREVIEW > 24 jam | Bearer Token |
 | `POST` | `/api/imports/:id/commit` | Commit batch preview menjadi transaksi aktual (`rows` override: `[{ index, category_id, include, learn_rule, keyword }]`). Mengembalikan metrik `imported_rows`, `duplicate_rows`, `skipped_rows`, `rules_saved`, dan `rule_warnings` | Bearer Token |
-| `DELETE` | `/api/imports/:id` | Rollback batch berstatus COMMITTED (tidak menghapus aturan kategori yang tersimpan) | Bearer Token |
+| `DELETE` | `/api/imports/:id` | Batalkan batch PREVIEW (menjadi CANCELLED tanpa transaksi) atau Rollback batch COMMITTED (hapus transaksi dan kembalikan saldo). Tidak menghapus aturan kategori | Bearer Token |
+| `GET` | `/api/imports/template/banks` | Daftar allowlist bank dan dompet digital yang didukung untuk template FinReport | Bearer Token |
 | `GET` | `/api/imports/template` | Unduh berkas template standar FinReport (`?bank=...&format=xlsx|csv`) | Bearer Token |
 | `GET` | `/api/imports` | Daftar riwayat batch pengguna | Bearer Token |
 | `GET` | `/api/imports/:id` | Detail batch import | Bearer Token |

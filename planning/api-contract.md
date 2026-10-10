@@ -257,9 +257,33 @@ Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.
   - `format`: `xlsx` atau `csv`, default `xlsx`.
 - **Response**: File streaming attachment (`Content-Disposition: attachment; filename="finreport-template-<bank>.<format>"`).
 
+### 3.1.1 Daftar Bank Template (`GET /api/imports/template/banks`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Deskripsi**: Mengambil allowlist bank dan dompet digital yang didukung untuk unduhan template mutasi.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Daftar template bank berhasil diambil",
+    "data": [
+      { "code": "BCA", "label": "Bank Central Asia (BCA)" },
+      { "code": "MANDIRI", "label": "Bank Mandiri" },
+      { "code": "BRI", "label": "Bank Rakyat Indonesia (BRI)" },
+      { "code": "BNI", "label": "Bank Negara Indonesia (BNI)" },
+      { "code": "CIMB", "label": "CIMB Niaga" },
+      { "code": "JAGO", "label": "Bank Jago" },
+      { "code": "DANA", "label": "DANA" },
+      { "code": "OVO", "label": "OVO" },
+      { "code": "GOPAY", "label": "GoPay" },
+      { "code": "LAINNYA", "label": "Bank / Dompet Digital Lainnya" }
+    ]
+  }
+  ```
+
 ### 3.2 Pratinjau Mutasi (`POST /api/imports/preview`)
 - **Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
 - **Body**: `file` (File), `account_id` (Integer), opsional `parser`, `mapping` (JSON), `file_password` (String).
+- **Catatan Pembersihan Malas**: Saat endpoint ini dipanggil, batch berstatus `PREVIEW` milik user yang berusia lebih dari 24 jam otomatis ditandai `CANCELLED`.
 - **Response (200 OK)**:
   ```json
   {
@@ -288,6 +312,16 @@ Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.
         }
       ]
     }
+  }
+  ```
+- **Error Response — Password Diperlukan / Salah (400 Bad Request)**:
+  ```json
+  {
+    "success": false,
+    "message": "File terenkripsi membutuhkan password untuk dibuka",
+    "errors": [
+      { "field": "file_password", "message": "File terenkripsi membutuhkan password untuk dibuka" }
+    ]
   }
   ```
 
@@ -334,3 +368,26 @@ Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.
     "data": { "id": 5, "userId": 1, "keyword": "toko kelontong", "categoryId": 3 }
   }
   ```
+
+### 3.5 Pembatalan & Rollback Batch Import (`DELETE /api/imports/:id`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Path Params**: `id` (Integer)
+- **Perilaku**:
+  - **Batch berstatus PREVIEW**: Mengubah status batch menjadi `CANCELLED` dan mengosongkan `parsed_payload` tanpa menghapus transaksi (karena belum di-commit).
+    ```json
+    {
+      "success": true,
+      "message": "Batch preview berhasil dibatalkan",
+      "data": { "batch_id": 12, "status": "CANCELLED", "deleted_transactions": 0, "message": "Batch preview berhasil dibatalkan" }
+    }
+    ```
+  - **Batch berstatus COMMITTED**: Menghapus seluruh transaksi terkait secara atomik, memulihkan saldo akun, dan mengubah status batch menjadi `CANCELLED`.
+    ```json
+    {
+      "success": true,
+      "message": "Batch import berhasil di-rollback dan transaksi telah dihapus",
+      "data": { "batch_id": 12, "status": "CANCELLED", "deleted_transactions": 9, "message": "Batch import berhasil di-rollback dan transaksi telah dihapus" }
+    }
+    ```
+  - **Batch berstatus CANCELLED**: Menolak pembatalan ulang dengan HTTP 400 (`Batch import sudah dibatalkan sebelumnya`).
+

@@ -176,6 +176,7 @@ export async function readFileBuffer({ buffer, fileName, password = null }) {
     if (!password) {
       const error = new Error("File terenkripsi membutuhkan password untuk dibuka");
       error.statusCode = 400;
+      error.errors = [{ field: "file_password", message: "File terenkripsi membutuhkan password untuk dibuka" }];
       throw error;
     }
 
@@ -192,11 +193,15 @@ export async function readFileBuffer({ buffer, fileName, password = null }) {
       ) {
         const error = new Error("Password file salah");
         error.statusCode = 400;
+        error.errors = [{ field: "file_password", message: "Password file salah" }];
         throw error;
       }
 
       const error = new Error("Gagal mendekripsi file: format enkripsi tidak didukung atau password tidak cocok");
       error.statusCode = 400;
+      error.errors = [
+        { field: "file_password", message: "Gagal mendekripsi file: format enkripsi tidak didukung atau password tidak cocok" }
+      ];
       throw error;
     }
   }
