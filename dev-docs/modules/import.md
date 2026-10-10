@@ -174,3 +174,35 @@ Untuk menjaga kerahasiaan data finansial nyata dan kepatuhan repository publik, 
 3. **Pengujian Berkelanjutan via Fixture Sintetis**:
    - Seluruh uji otomatis regresi (*automated regression suite*) di CI/CD atau repositori wajib menggunakan **fixture sintetis fiktif** (dihasilkan melalui skrip generator `seed-m8-testdata.js`) yang meniru struktur sampel tanpa menggunakan data nyata.
    - Pengujian terhadap berkas sampel nyata bersifat opsional (*conditional opt-in*) dan otomatis dilewati jika variabel lingkungan path berkas tidak didefinisikan.
+
+---
+
+## 7. Audit Keamanan M8.4
+
+Dilakukan pada 2026-10-11 sebagai bagian dari eksekusi M8.4 Jalur A, mengacu pada standar keamanan `ai-rules/security/README.md` (termasuk Checklist Part I).
+
+### 7.1 Ringkasan Temuan & Perbaikan
+
+| Sub-Batch | Area / Temuan | Tingkat Risiko | Status & Perbaikan |
+|-----------|---------------|----------------|--------------------|
+| **M8.4-1a** | Formula Injection pada ekspor Excel (`GET /api/reports/export/excel`) | Rendah | **Mitigasi Terverifikasi:** `exceljs` menulis sel deskripsi string sebagai sel teks murni OpenXML (`t="s"` atau `inlineStr`) tanpa tag formula `<f>`. Uji regresi `backend/scripts/test-export-formula-m8.4.js` memastikan sel berawalan `=`, `+`, `-`, `@` tidak dieksekusi sebagai formula saat dibuka di Excel. Dokumen modul menetapkan aturan: jika ekspor CSV ditambahkan di masa depan, sanitasi karakter formula wajib diterapkan di titik keluaran. |
+| **M8.4-1b** | Decompression Bomb (Zip Bomb) pada berkas XLSX | Tinggi | **Diperbaiki:** Di `backend/src/services/import/parsers/reader.js`, ditambahkan fungsi `validateXlsxZipStructure` yang memeriksa direktori ZIP sebelum ekstraksi. Menolak berkas dengan total ukuran tak-terkompresi > 50 MB (`MAX_XLSX_UNCOMPRESSED_BYTES`) atau jumlah entri ZIP > 2000 (`MAX_XLSX_ZIP_ENTRIES`) dengan HTTP 400 bersih ("Berkas Excel terlalu besar setelah diekstrak" / "Struktur berkas Excel tidak wajar"). Proteksi berlaku untuk XLSX polos maupun hasil dekripsi OLE/CFB. Dependensi `jszip` (^3.10.2) dideklarasikan di `backend/package.json` dan placeholder env ditambahkan di `.env.example`. Uji: `test-zipbomb-m8.4.js`. |
+| **M8.4-1c** | Endpoint `POST /api/imports/:id/commit` belum memiliki rate limiter | Sedang | **Diperbaiki:** Middleware `importCommitLimiter` ditambahkan di `backend/src/middlewares/rateLimiter.middleware.js` dan dipasang pada rute commit di `backend/src/routes/import.routes.js`. Batas bawaan: 30 commit per 10 menit per user terotentikasi (mencegah DoS / lock contention transaksi database). Dapat dilonggarkan via `IMPORT_COMMIT_RATE_LIMIT_MAX` (placeholder di `.env.example`). Uji: `test-commit-rate-limit-m8.4.js`. |
+| **M8.4-1d** | Audit dependensi `npm audit` | Sedang | **Diperbaiki:** Pada `frontend/`, paket `source-map-js` diperbarui ke `1.2.2` via `npm audit fix` (menutup celah DoS). Sisa temuan dianalisis: `braces` (terbawa oleh `nodemon` dev dan `tailwindcss` build tool), `esbuild` (Vite dev server), `react-router` (SSR hydration tidak dipakai di SPA CSR), dan `uuid` (internal `exceljs`). Tidak ada yang tereksploitasi di runtime produksi. Perbaikan tanpa major upgrade berhasil tanpa memutus build frontend (ukuran bundle tetap 799,39 kB). |
+| **M8.4-1e** | Isolasi akses antar-pengguna (IDOR) & Audit Log | Tinggi | **Terverifikasi Aman:** Skrip uji `backend/scripts/test-idor-m8.4.js` menguji matriks akses dua arah antara User A dan User B pada seluruh endpoint `/api/imports/*` (preview dengan rekening user lain, commit, rollback, detail batch, list filter) dan `/api/category-rules/*` (list, put, delete). Seluruh akses lintas pengguna ditolak HTTP 404/400 tanpa kebocoran data. Audit log kode mengonfirmasi nol `console.*` yang mencetak isi berkas, baris transaksi, payload, atau password. |
+
+### 7.2 Hasil Checklist Keamanan Part I (Relevan untuk Modul Import)
+
+- [x] **Credential Management:** Password berkas (`file_password`) hanya di memori, tidak pernah dicatat di log server, basis data, maupun respon JSON klien.
+- [x] **Input & Decompression Limit:** Batas upload 5 MB (Multer memory), batas dekompresi 50 MB, batas jumlah entri ZIP 2000.
+- [x] **Strict Query & Parameter Parsing:** Seluruh ID rute dan parameter query divalidasi via `parsePositiveInt` (`strict: true`), menolak input non-integer dengan HTTP 400 bersih tanpa dump query Prisma.
+- [x] **Multi-Tenant Data Isolation (IDOR Guard):** Semua query batch dan transaksi terkunci pada `userId`, dan kepemilikan rekening diverifikasi sebelum preview maupun commit.
+- [x] **Rate Limiting:** Rute preview diproteksi `importUploadLimiter` (10 req/10m), rute commit diproteksi `importCommitLimiter` (30 req/10m).
+- [x] **Zero File Persistence on Server:** Berkas diolah sepenuhnya dalam memori tanpa penulisan ke disk fisik server.
+- [x] **Temporary Data Cleanup:** Kolom `parsed_payload` di tabel `import_batches` dikosongkan segera setelah batch di-commit; batch preview kedaluwarsa (> 24 jam) dibersihkan secara malas saat preview baru.
+
+### 7.3 Sisa Risiko & Rencana Pemantauan
+
+1. **Dependensi Transitif `uuid` pada `exceljs`:** Berada pada pustaka internal `exceljs` untuk pembuatan ID XML. Tidak menerima masukan buffer eksternal langsung. Menunggu pembaruan minor dari upstream `exceljs`.
+2. **Kepatuhan Format Ekspor CSV di Masa Depan:** Saat ini aplikasi hanya menyediakan ekspor Excel (XLSX) dan PDF. Jika endpoint ekspor CSV/TSV dibuat di masa mendatang, modul wajib mengimplementasikan sanitasi karakter awalan formula (`=`, `+`, `-`, `@`) secara mandiri.
+
