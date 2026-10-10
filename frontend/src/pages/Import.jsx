@@ -2,22 +2,25 @@ import React, { useState, useEffect } from "react";
 import {
   FileUp,
   History,
-  UploadCloud,
   Loader2,
   AlertCircle,
   FileSpreadsheet,
-  CheckCircle2,
   Info,
   ArrowRight,
-  ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2
 } from "lucide-react";
+import api from "../services/api";
 import { getAccounts } from "../services/accountService";
-import { previewImport } from "../services/importService";
+import { previewImport, commitImport } from "../services/importService";
 import ImportDropzone from "../components/import/ImportDropzone";
 import TemplateDownloadModal from "../components/import/TemplateDownloadModal";
 import FilePasswordModal from "../components/import/FilePasswordModal";
 import GenericMappingForm from "../components/import/GenericMappingForm";
+import ImportSummaryBar from "../components/import/ImportSummaryBar";
+import ImportReviewTable from "../components/import/ImportReviewTable";
+import ImportReviewCards from "../components/import/ImportReviewCards";
+import ImportResultScreen from "../components/import/ImportResultScreen";
 
 const PARSER_OPTIONS = [
   { value: "auto", label: "Otomatis (Rekomendasi)", desc: "Deteksi otomatis berdasarkan struktur dan header berkas" },
@@ -29,9 +32,10 @@ const PARSER_OPTIONS = [
 export default function Import() {
   const [activeTab, setActiveTab] = useState("new"); // "new" | "history"
 
-  // Master Data Rekening
+  // Master Data
   const [accounts, setAccounts] = useState([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
 
   // Form State
   const [selectedAccountId, setSelectedAccountId] = useState("");
@@ -39,9 +43,12 @@ export default function Import() {
   const [selectedParser, setSelectedParser] = useState("auto");
   const [genericMapping, setGenericMapping] = useState({ date: "", description: "", amount: "" });
 
-  // Preview Result & State
+  // Preview & Review State
   const [previewData, setPreviewData] = useState(null);
+  const [reviewRows, setReviewRows] = useState([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [submittingCommit, setSubmittingCommit] = useState(false);
+  const [commitResult, setCommitResult] = useState(null);
   const [pageError, setPageError] = useState("");
 
   // Modals State
@@ -50,23 +57,31 @@ export default function Import() {
   const [passwordModalError, setPasswordModalError] = useState("");
 
   useEffect(() => {
-    fetchAccounts();
+    loadInitialData();
   }, []);
 
-  const fetchAccounts = async () => {
-    setLoadingAccounts(true);
+  const loadInitialData = async () => {
+    setLoadingInitial(true);
     try {
-      const res = await getAccounts({ include_archived: "false" });
-      if (res.success && Array.isArray(res.data)) {
-        setAccounts(res.data);
-        if (res.data.length > 0) {
-          setSelectedAccountId(String(res.data[0].id));
+      const [accRes, catRes] = await Promise.all([
+        getAccounts({ include_archived: "false" }),
+        api.get("/categories")
+      ]);
+
+      if (accRes.success && Array.isArray(accRes.data)) {
+        setAccounts(accRes.data);
+        if (accRes.data.length > 0) {
+          setSelectedAccountId(String(accRes.data[0].id));
         }
       }
-    } catch (err) {
-      setPageError("Gagal memuat daftar rekening pengguna.");
+
+      if (catRes.data?.success && Array.isArray(catRes.data.data)) {
+        setCategories(catRes.data.data);
+      }
+    } catch {
+      setPageError("Gagal memuat data pendukung (rekening dan kategori).");
     } finally {
-      setLoadingAccounts(false);
+      setLoadingInitial(false);
     }
   };
 
@@ -104,6 +119,14 @@ export default function Import() {
       const res = await previewImport(formData);
       if (res.success && res.data) {
         setPreviewData(res.data);
+        const mappedRows = (res.data.rows || []).map((r) => ({
+          ...r,
+          include: !r.is_duplicate,
+          category_id: r.suggested_category_id || null,
+          learn_rule: false,
+          keyword: r.suggested_keyword || r.description || ""
+        }));
+        setReviewRows(mappedRows);
         setIsPasswordModalOpen(false);
       }
     } catch (err) {
@@ -123,12 +146,61 @@ export default function Import() {
     }
   };
 
-  const handlePasswordSubmit = (password) => {
-    handleProcessPreview(password);
+  const handleRowChange = (rowIndex, partialChange) => {
+    setReviewRows((prev) =>
+      prev.map((r) => (r.index === rowIndex ? { ...r, ...partialChange } : r))
+    );
+  };
+
+  const handleSelectAllNew = () => {
+    setReviewRows((prev) => prev.map((r) => ({ ...r, include: !r.is_duplicate })));
+  };
+
+  const handleSelectAll = () => {
+    setReviewRows((prev) => prev.map((r) => ({ ...r, include: true })));
+  };
+
+  const handleDeselectAll = () => {
+    setReviewRows((prev) => prev.map((r) => ({ ...r, include: false })));
+  };
+
+  const handleCommit = async () => {
+    if (!previewData?.batch_id) return;
+
+    const includedRows = reviewRows.filter((r) => r.include);
+    if (includedRows.length === 0) {
+      setPageError("Harap centang setidaknya satu transaksi untuk diimpor.");
+      return;
+    }
+
+    setPageError("");
+    setSubmittingCommit(true);
+
+    const payloadRows = reviewRows.map((r) => ({
+      index: r.index,
+      category_id: r.category_id,
+      include: !!r.include,
+      learn_rule: !!r.learn_rule,
+      keyword: r.keyword || r.description
+    }));
+
+    try {
+      const res = await commitImport(previewData.batch_id, payloadRows);
+      if (res.success && res.data) {
+        setCommitResult(res.data);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Gagal menyimpan batch import transaksi.";
+      setPageError(msg);
+    } finally {
+      setSubmittingCommit(false);
+    }
   };
 
   const handleResetImport = () => {
     setPreviewData(null);
+    setReviewRows([]);
+    setCommitResult(null);
     setSelectedFile(null);
     setPageError("");
   };
@@ -139,7 +211,8 @@ export default function Import() {
     }
   };
 
-  const selectedAccountObj = accounts.find((a) => String(a.id) === String(selectedAccountId));
+  const accountNames = accounts.map((a) => a.name);
+  const selectedCount = reviewRows.filter((r) => r.include).length;
 
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto">
@@ -200,8 +273,18 @@ export default function Import() {
             </div>
           )}
 
-          {!previewData ? (
-            /* STEP 1: Form Pemilihan Rekening & Upload */
+          {commitResult ? (
+            /* STEP 3: Layar Hasil Commit */
+            <ImportResultScreen
+              result={commitResult}
+              onReset={handleResetImport}
+              onGoToHistory={() => {
+                handleResetImport();
+                setActiveTab("history");
+              }}
+            />
+          ) : !previewData ? (
+            /* STEP 1: Form Pemilihan Rekening & Upload Berkas */
             <div className="bg-white p-5 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               <div className="border-b border-slate-100 pb-4">
                 <h2 className="text-base font-bold text-slate-800">Langkah 1: Konfigurasi & Berkas</h2>
@@ -213,7 +296,7 @@ export default function Import() {
                 <label htmlFor="import-account-select" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Pilih Rekening Tujuan <span className="text-rose-500">*</span>
                 </label>
-                {loadingAccounts ? (
+                {loadingInitial ? (
                   <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-sm">
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                     <span>Memuat rekening...</span>
@@ -307,7 +390,7 @@ export default function Import() {
               </div>
             </div>
           ) : (
-            /* STEP 2: Preview Hasil (placeholder untuk Batch M8.3-4) */
+            /* STEP 2: Tinjau & Konfirmasi Pratinjau Mutasi */
             <div className="space-y-6">
               {/* Banner Usulan Rekening (Suggested Account) */}
               {previewData.suggested_account &&
@@ -335,29 +418,96 @@ export default function Import() {
                   </div>
                 )}
 
-              {/* Placeholder Tabel Preview Transaksi */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              {/* Summary Bar & Collapsible Warnings */}
+              <ImportSummaryBar
+                summary={previewData.summary}
+                warnings={previewData.warnings}
+                parserName={previewData.parser}
+                fileName={previewData.file_name}
+              />
+
+              {/* Review Container */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
-                      Langkah 2: Tinjau Pratinjau Mutasi ({previewData.summary?.total || 0} baris)
+                      Langkah 2: Tinjau & Sesuaikan Kategori Transaksi
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Parser: <span className="font-semibold uppercase">{previewData.parser}</span> | Berkas: {previewData.file_name}
+                      Centang transaksi yang ingin diimpor, ubah kategori sesuai kebutuhan, atau centang ingat aturan.
                     </p>
                   </div>
+
                   <button
                     type="button"
                     onClick={handleResetImport}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition self-start sm:self-center"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Pilih Berkas Lain</span>
                   </button>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl text-center text-sm text-slate-600">
-                  Pratinjau berkas berhasil dimuat! Tabel tinjau dan aksi commit transaksi akan ditampilkan pada Batch M8.3-4.
+                {/* Desktop Table View (>= 768px) */}
+                <div className="hidden md:block">
+                  <ImportReviewTable
+                    rows={reviewRows}
+                    categories={categories}
+                    accountNames={accountNames}
+                    onRowChange={handleRowChange}
+                    onSelectAllNew={handleSelectAllNew}
+                    onSelectAll={handleSelectAll}
+                    onDeselectAll={handleDeselectAll}
+                  />
+                </div>
+
+                {/* Mobile Cards View (< 768px) */}
+                <div className="md:hidden">
+                  <ImportReviewCards
+                    rows={reviewRows}
+                    categories={categories}
+                    accountNames={accountNames}
+                    onRowChange={handleRowChange}
+                    onSelectAllNew={handleSelectAllNew}
+                    onSelectAll={handleSelectAll}
+                    onDeselectAll={handleDeselectAll}
+                  />
+                </div>
+
+                {/* Fixed / Bottom Commit Action Bar */}
+                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-xs text-slate-500">
+                    <span className="font-bold text-slate-800">{selectedCount}</span> transaksi dipilih untuk disimpan ke database.
+                  </div>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleResetImport}
+                      disabled={submittingCommit}
+                      className="w-1/2 sm:w-auto px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCommit}
+                      disabled={submittingCommit || selectedCount === 0}
+                      className="w-1/2 sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
+                    >
+                      {submittingCommit ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Simpan & Selesaikan ({selectedCount})</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
