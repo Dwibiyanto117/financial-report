@@ -29,7 +29,29 @@ import os from "os";
 import bcrypt from "bcryptjs";
 import ExcelJS from "exceljs";
 import officecrypto from "officecrypto-tool";
+import PdfPrinter from "pdfmake";
 import prisma from "../src/config/prisma.js";
+
+const pdfFonts = {
+  Helvetica: {
+    normal: "Helvetica",
+    bold: "Helvetica-Bold",
+    italics: "Helvetica-Oblique",
+    bolditalics: "Helvetica-BoldOblique"
+  }
+};
+const pdfPrinter = new PdfPrinter(pdfFonts);
+
+function createPdfBuffer(docDefinition, options = {}) {
+  return new Promise((resolve, reject) => {
+    const doc = pdfPrinter.createPdfKitDocument(docDefinition, options);
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", (err) => reject(err));
+    doc.end();
+  });
+}
 
 const TEST_EMAIL = process.env.M8_TEST_EMAIL || "m8test2@example.com";
 const TEST_PASSWORD = process.env.M8_TEST_PASSWORD;
@@ -269,6 +291,134 @@ async function generateFixtures() {
     console.log(`mandiri-sintetis.xlsx berhasil dibuat dan dienkripsi.`);
   } else {
     console.log("INFO: M8_FIXTURE_PASSWORD tidak diset, melewati pembuatan mandiri-sintetis.xlsx terenkripsi.");
+  }
+
+  // 11. Fixtures PDF Sintetis
+  // 11a. pdf-single-page.pdf (1 halaman tabel)
+  const singlePdfBuf = await createPdfBuffer({
+    defaultStyle: { font: "Helvetica", fontSize: 9 },
+    content: [
+      { text: "LAPORAN MUTASI REKENING (SINTETIS)", bold: true, fontSize: 12, margin: [0, 0, 0, 10] },
+      {
+        table: {
+          widths: [70, 180, 80, 50],
+          body: [
+            ["Tanggal", "Keterangan", "Nominal", "Tipe"],
+            ["2026-08-01", "Gaji Pokok Agustus", "10000000", "CR"],
+            ["2026-08-02", "Belanja Supermarket", "450000", "DB"],
+            ["2026-08-03", "Pembayaran Listrik PLN", "250000", "DB"],
+            ["2026-08-04", "Transfer Masuk Teman", "500000", "CR"]
+          ]
+        }
+      }
+    ]
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-single-page.pdf"), singlePdfBuf);
+
+  // 11b. pdf-multi-page.pdf (Banyak halaman dengan header tabel berulang)
+  const multiPageRows = [["Tanggal", "Keterangan", "Nominal", "Tipe"]];
+  for (let i = 1; i <= 80; i++) {
+    multiPageRows.push([
+      `2026-08-${String((i % 28) + 1).padStart(2, "0")}`,
+      `Transaksi Multi Page #${i}`,
+      `${10000 * i}`,
+      i % 2 === 0 ? "CR" : "DB"
+    ]);
+  }
+  const multiPdfBuf = await createPdfBuffer({
+    defaultStyle: { font: "Helvetica", fontSize: 9 },
+    content: [
+      { text: "MUTASI TRANSAKSI PANJANG", bold: true, fontSize: 12, margin: [0, 0, 0, 10] },
+      {
+        table: {
+          headerRows: 1,
+          widths: [70, 180, 80, 50],
+          body: multiPageRows
+        }
+      }
+    ]
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-multi-page.pdf"), multiPdfBuf);
+
+  // 11c. pdf-multiline-desc.pdf (Deskripsi multi-baris)
+  const multilinePdfBuf = await createPdfBuffer({
+    defaultStyle: { font: "Helvetica", fontSize: 9 },
+    content: [
+      { text: "MUTASI DENGAN DESKRIPSI MULTI-BARIS", bold: true, fontSize: 12, margin: [0, 0, 0, 10] },
+      {
+        table: {
+          widths: [70, 200, 80, 50],
+          body: [
+            ["Tanggal", "Keterangan", "Nominal", "Tipe"],
+            ["2026-08-01", "DEBIT PEMBELIAN GROSIR\nREF: TRX-998811\nTERMINAL: EDC-102", "750000", "DB"],
+            ["2026-08-02", "TRANSFER MASUK\nDARI PT SINTETIS JAYA\nBERITA: BONUS PROYEK", "2500000", "CR"]
+          ]
+        }
+      }
+    ]
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-multiline-desc.pdf"), multilinePdfBuf);
+
+  // 11d. pdf-debit-credit.pdf (Kolom Debit, Kredit, Saldo terpisah)
+  const debitCreditPdfBuf = await createPdfBuffer({
+    defaultStyle: { font: "Helvetica", fontSize: 9 },
+    content: [
+      { text: "MUTASI DENGAN KOLOM DEBIT KREDIT", bold: true, fontSize: 12, margin: [0, 0, 0, 10] },
+      {
+        table: {
+          widths: [65, 140, 75, 75, 75],
+          body: [
+            ["Tanggal", "Keterangan", "Debit", "Kredit", "Saldo"],
+            ["2026-08-01", "Setoran Awal", "-", "5000000", "5000000"],
+            ["2026-08-02", "Tarik Tunai ATM", "200000", "-", "4800000"],
+            ["2026-08-03", "Bunga Tabungan", "-", "15000", "4815000"]
+          ]
+        }
+      }
+    ]
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-debit-credit.pdf"), debitCreditPdfBuf);
+
+  // 11e. pdf-scanned-no-text.pdf (PDF gambar tanpa teks)
+  const transparentPngBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const scannedPdfBuf = await createPdfBuffer({
+    content: [
+      { image: transparentPngBase64, width: 250, height: 250 }
+    ]
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-scanned-no-text.pdf"), scannedPdfBuf);
+
+  // 11f. pdf-51-pages.pdf (51 halaman, melebihi batas 50 halaman)
+  const p51Content = [];
+  for (let i = 1; i <= 51; i++) {
+    p51Content.push({ text: `Halaman ${i}`, pageBreak: i < 51 ? "after" : undefined });
+  }
+  const p51PdfBuf = await createPdfBuffer({
+    defaultStyle: { font: "Helvetica", fontSize: 10 },
+    content: p51Content
+  });
+  fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-51-pages.pdf"), p51PdfBuf);
+
+  // 11g. pdf-encrypted.pdf (PDF berpassword)
+  if (FIXTURE_PASSWORD) {
+    const encPdfBuf = await createPdfBuffer({
+      defaultStyle: { font: "Helvetica", fontSize: 9 },
+      userPassword: FIXTURE_PASSWORD,
+      content: [
+        { text: "MUTASI PDF TERENKRIPSI SINTETIS", bold: true, fontSize: 12, margin: [0, 0, 0, 10] },
+        {
+          table: {
+            widths: [70, 180, 80, 50],
+            body: [
+              ["Tanggal", "Keterangan", "Nominal", "Tipe"],
+              ["2026-08-01", "Transaksi Rahasia Encrypted", "1250000", "DB"]
+            ]
+          }
+        }
+      ]
+    });
+    fs.writeFileSync(path.join(FIXTURE_DIR, "pdf-encrypted.pdf"), encPdfBuf);
+    console.log("pdf-encrypted.pdf berhasil dibuat dan dienkripsi.");
   }
 
   console.log("Semua berkas fixtures sintetis berhasil dibuat.");

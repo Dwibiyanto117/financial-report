@@ -9,6 +9,7 @@
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import officecrypto from "officecrypto-tool";
+import { readPdfBuffer, hasPdfSignature } from "../pdf/pdfReader.js";
 
 // Konstanta batas dekompresi arsip XLSX (Proteksi Zip Bomb)
 export const MAX_XLSX_UNCOMPRESSED_BYTES = process.env.IMPORT_XLSX_MAX_DECOMPRESSED_BYTES
@@ -268,6 +269,18 @@ export async function readFileBuffer({ buffer, fileName, password = null }) {
       grid,
       rawBuffer: workingBuffer,
       isEncrypted
+    };
+  }
+
+  // Jika PDF
+  if (ext === "pdf" || hasPdfSignature(workingBuffer)) {
+    const pdfResult = await readPdfBuffer({ buffer: workingBuffer, password });
+    return {
+      format: "pdf",
+      grid: pdfResult.grid,
+      pdf: pdfResult,
+      rawBuffer: workingBuffer,
+      isEncrypted: Boolean(password)
     };
   }
 

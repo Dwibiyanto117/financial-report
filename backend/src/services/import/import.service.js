@@ -121,6 +121,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
     parserModule = detectParser({
       grid: fileData.grid,
       sheets: fileData.sheets || null,
+      pdf: fileData.pdf || null,
       fileName: file.originalname,
       mapping: resolvedMapping
     });
@@ -130,6 +131,7 @@ export async function preview({ userId, accountId, file, parser = null, mapping 
   const parseResult = parserModule.parse({
     grid: fileData.grid,
     sheets: fileData.sheets || null,
+    pdf: fileData.pdf || null,
     fileName: file.originalname,
     mapping: resolvedMapping
   });
