@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
-> **Last Updated:** 2026-10-06
-> **Phase:** M8.2 Selesai (Statement Import Enhancements & Standard Template) — v0.5.0
+> **Last Updated:** 2026-10-10
+> **Phase:** M8.3 Selesai (Frontend UI Statement Import & Backend Support) — v0.5.0
 
 ---
 
@@ -197,5 +197,44 @@ Penyempurnaan fungsionalitas cerdas dan penyediaan template standar seragam pada
   - Parser adapter `template` (`parsers/template.js`) dengan deteksi skor 1.0 (sheet Info `FINREPORT-IMPORT-V1`) dan 0.9 (header mutasi standar), ekstraksi tanggal Date object berbasis komponen UTC untuk mencegah pergeseran zona waktu (WIB vs UTC), sanitasi formula, dan penghitungan baris rusak pada `summary.invalid`.
 - [x] **Suite Pengujian Sintetis & Regresi (Batch M8.2-5)**:
   - Skrip pengujian mandiri `backend/scripts/verify-m8.2.js` lulus 100% pada 7 skenario pengujian komprehensif (usulan rekening, belajar aturan, endpoint PUT, longest-keyword precedence, download template, roundtrip XLSX, invariansi zona waktu UTC vs Asia/Jakarta, batas 2000 baris, dan regresi baseline pengguna lama `budi@example.com`).
+
+---
+
+## Batch M8.3 — Frontend UI Statement Import & Backend Support (2026-10-10)
+
+Antarmuka pengguna penuh untuk alur impor mutasi (`/import`) serta dukungan backend pelengkap selesai diimplementasikan dan terverifikasi penuh:
+
+- [x] **Dukungan Backend untuk UI (Batch M8.3-1)**:
+  - Format terstruktur galat berkas terenkripsi membawa `error.errors = [{ field: "file_password", message: ... }]` pada `reader.js`.
+  - Endpoint baru `GET /api/imports/template/banks` mengembalikan allowlist bank dari `bankTemplates.js` sebagai sumber kebenaran tunggal.
+  - Pembatalan batch `PREVIEW` via `DELETE /api/imports/:id` mengubah status menjadi `CANCELLED` tanpa menghapus transaksi (`deleted_transactions: 0`).
+  - Pembersihan malas (*lazy cleanup*) batch `PREVIEW` usang (> 24 jam) saat permintaan `POST /api/imports/preview`.
+  - Dukungan komponen UTC pada kolom Waktu objek Date Excel di `parsers/template.js` serta peringatan format per baris.
+  - Perbaikan regresi baseline saldo hitung pengguna non-uji di `verify-m8.2.js`, skrip rate limiter terisolasi `verify-rate-limit.js`, dan uji 4 zona waktu `test-tz-template.js`.
+- [x] **Layanan Frontend & Routing (`frontend/src/services/importService.js`)**:
+  - `previewImport(formData)` (multipart)
+  - `commitImport(batchId, rows)` (atomic commit dengan opt-in rules)
+  - `getImports(params)` & `getImportById(id)`
+  - `rollbackImport(id)` (pembatalan preview / rollback committed)
+  - `getTemplateBanks()`
+  - `downloadTemplate(bank, format)` (unduhan blob dengan header token)
+  - CRUD Category Rules client.
+  - Rute `/import` terdaftar di `App.jsx`, menu Sidebar desktop, serta tombol aksi cepat di header `Transactions.jsx` dan `Accounts.jsx`.
+- [x] **Komponen UI Alur Impor (`frontend/src/components/import/`)**:
+  - `ImportDropzone.jsx`: Drag-and-drop & file picker dengan validasi format (.csv/.xlsx), batas 5 MB, dan aksesibilitas keyboard (tabIndex, Enter/Space).
+  - `TemplateDownloadModal.jsx`: Modal dialog unduhan template dinamis dari allowlist backend dalam format XLSX/CSV via blob, petunjuk pengisian `MASUK / KELUAR`, dan atribut ARIA.
+  - `FilePasswordModal.jsx`: Modal password in-memory zero-logging (tidak pernah dicatat di log atau disimpan di browser storage) terdeteksi otomatis via field error `file_password`.
+  - `GenericMappingForm.jsx`: Pemetaan kolom generik kustom untuk format nominal tunggal maupun kolom debit/kredit terpisah.
+  - `ImportSummaryBar.jsx`: Bar metrik ringkasan (Total, Baru, Duplikat, Tidak Valid) dan panel collapsible peringatan parser/rekonsiliasi.
+  - `ImportReviewTable.jsx`: Tampilan tabel desktop (>= 768px) dengan aksi massal, checkbox baris, dropdown kategori sesuai tipe, badge rekomendasi kategori, badge duplikat, badge informasional potensi transfer ("Mungkin Transfer"), dan opsi "Ingat aturan kata kunci" (`learn_rule`).
+  - `ImportReviewCards.jsx`: Tampilan kartu mobile responsif (< 768px) dengan fungsionalitas setara.
+  - `ImportResultScreen.jsx`: Layar hasil commit transaksi dan aturan tersimpan.
+  - `ImportHistoryList.jsx`: Tab riwayat batch impor dengan filter rekening & status (`ALL`, `COMMITTED`, `CANCELLED`, `PREVIEW`), tombol batalkan pratinjau, dan tombol rollback.
+  - `RollbackConfirmModal.jsx`: Dialog peringatan permanen dan konfirmasi rollback atomik pemulihan saldo.
+- [x] **Batch M8.3-F: Perbaikan Pasca-M8.3**:
+  - F1: Sinkronisasi petunjuk pengisian template menjadi `Jenis (MASUK / KELUAR)` pada `TemplateDownloadModal.jsx`.
+  - F2: Klarifikasi jumlah baris riwayat setelah rollback (menampilkan `0 / total` dengan keterangan `{importedRows} transaksi dibatalkan` atau `Pratinjau dibuang`) dan batch pratinjau (`- / total` dengan keterangan `Belum disimpan`) melalui helper `getBatchRowCountDisplay` di `importHelpers.js`.
+  - F3: Sinkronisasi menyeluruh dokumentasi `dev-docs/ai/*` dan dokumen planning.
+  - F4: Investigasi ukuran bundle Vite (tercatat sudah 726 kB sebelum M8.3, 799 kB setelah M8.3; usulan `React.lazy` didokumentasikan di `TECHNICAL_DEBT.md`).
 
 

@@ -8,3 +8,5 @@ Daftar ringkasan commit:
 - 2026-10-06: `feat(import): statement import enhancements & standard template (batches M8.2-0 to M8.2-5)`
 
 - 2026-10-06: `docs(planning): add M8.3 implementation plan and M8.2 review findings`
+- 2026-10-10: `feat(import): statement import frontend UI & backend support (batches M8.3-0 to M8.3-6)`
+- 2026-10-10: `fix(import): post-M8.3 refinements (batches M8.3-F1 to M8.3-F4)`

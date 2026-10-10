@@ -1,16 +1,16 @@
 # Rencana Pengerjaan M8 — Statement Import (RESUME POINT)
 
-> **Status:** M8.2 SELESAI — Titik lanjut: M8.3 (Frontend UI /import)
-> **Sumber:** `planning/bank-import.md`, `dev-docs/ai/TASKS.md` Batch M8.2
-> **Diperbarui:** 2026-10-06
+> **Status:** M8.3 SELESAI — Titik lanjut: M8.4 (Adapter e-wallet & parser BCA/PDF, menunggu sampel)
+> **Sumber:** `planning/bank-import.md`, `dev-docs/ai/TASKS.md` Batch M8.3
+> **Diperbarui:** 2026-10-10
 
 ---
 
 ## 1. Cara Melanjutkan (mulai dari sini)
 
 1. `git pull` di branch `dev`.
-2. Batch M8.1 (core backend, skema, parser Mandiri & Generic) dan **Batch M8.2** (usulan rekening 4 digit akhir, belajar aturan kategori, prioritas keyword terpanjang, download template dan adapter parser template) sudah selesai dan lulus verifikasi 100%.
-3. Lanjutkan ke **Batch M8.3** (Frontend UI `/import` dan menu download template). Rencana rinci dan perbaikan hasil review ada di `planning/M8.3-implementation-plan.md`; mulai dari Batch M8.3-0.
+2. Batch M8.1 (core backend, skema, parser Mandiri & Generic), **Batch M8.2** (usulan rekening 4 digit akhir, belajar aturan kategori, prioritas keyword terpanjang, download template dan adapter parser template), dan **Batch M8.3** (Frontend UI `/import`, alur review/commit/rollback, perbaikan M8.3-F) sudah selesai dan lulus verifikasi 100%.
+3. Lanjutkan ke **Batch M8.4** (Adapter e-wallet & parser BCA/PDF) saat sampel berkas mutasi riil telah disediakan oleh pemilik proyek.
 
 ---
 
@@ -22,7 +22,8 @@
 | MOD-07 Multi Rekening + Transfer (M7.1, M7.2) | Selesai (`67c91cc`) |
 | **M8.1 Pipeline Import Core (Backend)** | **Selesai & terverifikasi (v0.4.0)** |
 | **M8.2 Enhancements & Standard Template** | **Selesai & terverifikasi (v0.5.0)** |
-| **M8.3 Frontend UI /import** | **Siap dikerjakan berikutnya** |
+| **M8.3 Frontend UI /import** | **Selesai & terverifikasi (v0.5.0)** |
+| **M8.4 Adapter e-wallet & parser BCA/PDF** | **Menunggu ketersediaan sampel berkas** |
 | Sampel Mandiri terenkripsi | Terintegrasi & teruji penuh pada pipeline |
 
 ---

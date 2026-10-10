@@ -96,5 +96,24 @@
   - [x] Batch M8.2-3: Penyempurnaan prioritas kategorisasi (longest-keyword precedence & `suggestion_source`).
   - [x] Batch M8.2-4: Template standar FinReport (allowlist `bankTemplates.js`, `templateGenerator.js`, download endpoint `GET /api/imports/template`, adapter parser `template.js`).
   - [x] Batch M8.2-5: Extended synthetic test suite (`verify-m8.2.js`) & sinkronisasi dokumentasi proyek.
-- [ ] **Batch M8.3** (rencana lengkap: `planning/M8.3-implementation-plan.md`; mulai dari Batch M8.3-0, perbaikan hasil review M8.2): Frontend UI `/import` (dropzone berkas, modal password, tabel review preview transaksi, dropdown kategori, badge duplikat, tab riwayat import & rollback), menu UI "Unduh Template" (pilih bank), usulan transfer antar-rekening.
-- [ ] **Batch M8.4**: Adapter e-wallet & parser BCA / PDF (menunggu ketersediaan sampel berkas) & audit keamanan akhir M8.
+- [x] **Batch M8.3: Frontend UI Import Mutasi Rekening (`/import`)**:
+  - [x] Batch M8.3-0: Perbaikan review M8.2 (regresi saldo hitung baseline, skrip rate limit terisolasi, uji zona waktu 4 kawasan, sanitasi error 400 template, dukungan Date UTC kolom waktu).
+  - [x] Batch M8.3-1: Dukungan backend untuk UI (field error terstruktur `file_password`, endpoint allowlist `GET /api/imports/template/banks`, pembatalan batch `PREVIEW` via `DELETE /api/imports/:id`, pembersihan malas batch `PREVIEW` > 24 jam).
+  - [x] Batch M8.3-2: Layanan frontend `importService.js`, pendaftaran rute `/import`, menu navigasi Sidebar & tombol akses cepat di Transaksi dan Rekening.
+  - [x] Batch M8.3-3: Form pemilihan rekening tujuan, dropzone berkas drag-and-drop (.csv/.xlsx maks 5 MB), modal unduh template bank dinamis, modal password in-memory zero-logging, pemetaan kolom generic kustom.
+  - [x] Batch M8.3-4: Tinjau pratinjau transaksi (desktop table & mobile cards, seleksi massal, dropdown kategori, badge duplikat, badge rekomendasi kategori, badge informasional potensi transfer, opt-in `learn_rule`), layar hasil commit.
+  - [x] Batch M8.3-5: Tab riwayat impor dengan filter status/rekening, pembatalan pratinjau, modal konfirmasi rollback atomik pemulihan saldo.
+  - [x] Batch M8.3-6: Polesan aksesibilitas ARIA & keyboard (Escape, dropzone Enter/Space, radiogroup), integrasi submit password modal, sinkronisasi dokumen per modul.
+- [x] **Batch M8.3-F: Perbaikan Pasca-M8.3**:
+  - [x] M8.3-F1: Sinkronisasi petunjuk pengisian modal template menjadi `Jenis (MASUK / KELUAR)`.
+  - [x] M8.3-F2: Klarifikasi tampilan jumlah baris riwayat setelah rollback (0 / total dengan keterangan transaksi dibatalkan) dan batch pratinjau dibuang pada desktop & mobile via helper `getBatchRowCountDisplay`.
+  - [x] M8.3-F3: Sinkronisasi menyeluruh `dev-docs/ai/*` dan dokumen planning proyek.
+  - [x] M8.3-F4: Investigasi ukuran bundle Vite (tercatat sudah > 500 kB sebelum M8.3) & dokumentasi usulan code-splitting di `TECHNICAL_DEBT.md`.
+
+---
+
+## Milestone Selanjutnya (Next: M8.4)
+- [ ] **Batch M8.4: Adapter E-Wallet & Parser BCA / PDF**:
+  - [ ] Adapter format e-wallet (GoPay, OVO, Dana, ShopeePay) saat sampel mutasi CSV/XLSX tersedia.
+  - [ ] Parser BCA dan/atau parser PDF statement bank (menunggu penyediaan sampel berkas).
+  - [ ] Audit keamanan menyeluruh pipeline impor mutasi.
