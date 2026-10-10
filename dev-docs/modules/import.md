@@ -143,7 +143,10 @@ Hierarki penentuan kategori per baris transaksi:
 ## 5. Keamanan & Proteksi Data
 - **In-Memory Processing:** Berkas tidak pernah ditulis ke disk server.
 - **Zero-Logging Credential:** Password berkas (`file_password`) tidak pernah dicatat di log, database, maupun response.
-- **Anti-CSV Injection:** Sel yang diawali `=`, `+`, `-`, atau `@` dinetralkan dengan menambahkan tanda petik tunggal (`'`).
+- **Anti-Formula Injection pada Impor & Ekspor:**
+  - Pada pipeline impor, sel string yang diawali `=`, `+`, `-`, atau `@` dinetralkan dengan menambahkan tanda petik tunggal (`'`).
+  - Pada ekspor Excel (`GET /api/reports/export/excel`), pustaka `exceljs` menulis nilai sel bertipe string sebagai sel teks murni OpenXML (`t="s"` atau `inlineStr`) tanpa tag formula `<f>`. Uji regresi memastikan sel berawalan formula tidak dieksekusi sebagai formula saat dibuka.
+  - **Catatan Ekspor Masa Depan:** Jika di masa depan ditambahkan fitur ekspor CSV/TSV, modul ekspor WAJIB secara aktif menetralkan sel yang diawali `=`, `+`, `-`, atau `@` (misalnya dengan prepend petik tunggal atau sanitasi) karena format teks polos tidak memiliki metadata tipe sel bawaan.
 - **Data Isolation:** Seluruh query difilter berdasarkan `userId`, dan `account_id` wajib diverifikasi kepemilikannya.
 - **Payload Cleanup:** Kolom `parsed_payload` di `import_batches` dikosongkan segera setelah batch di-commit.
 
