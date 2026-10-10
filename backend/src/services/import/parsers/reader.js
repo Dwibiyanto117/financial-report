@@ -7,10 +7,63 @@
  */
 
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import officecrypto from "officecrypto-tool";
+
+// Konstanta batas dekompresi arsip XLSX (Proteksi Zip Bomb)
+export const MAX_XLSX_UNCOMPRESSED_BYTES = process.env.IMPORT_XLSX_MAX_DECOMPRESSED_BYTES
+  ? parseInt(process.env.IMPORT_XLSX_MAX_DECOMPRESSED_BYTES, 10)
+  : 50 * 1024 * 1024; // 50 MB
+
+export const MAX_XLSX_ZIP_ENTRIES = process.env.IMPORT_XLSX_MAX_ZIP_ENTRIES
+  ? parseInt(process.env.IMPORT_XLSX_MAX_ZIP_ENTRIES, 10)
+  : 2000;
 
 // Signature OLE Compound Document (CFB)
 const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0];
+
+/**
+ * Memvalidasi direktori ZIP berkas XLSX sebelum diekstrak oleh ExcelJS (mencegah zip bomb).
+ * Menolak berkas dengan total ukuran tak-terkompresi > 50 MB atau jumlah entri > 2000.
+ *
+ * @param {Buffer} buffer
+ * @returns {Promise<{ totalUncompressedSize: number, entryCount: number }>}
+ */
+export async function validateXlsxZipStructure(buffer) {
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(buffer);
+  } catch {
+    const error = new Error("Gagal membaca struktur berkas Excel atau format tidak valid");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const entries = Object.values(zip.files);
+  if (entries.length > MAX_XLSX_ZIP_ENTRIES) {
+    const error = new Error("Struktur berkas Excel tidak wajar");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let totalUncompressedSize = 0;
+  for (const entry of entries) {
+    const uSize = entry._data ? Number(entry._data.uncompressedSize) || 0 : 0;
+    if (uSize < 0) {
+      const error = new Error("Struktur berkas Excel tidak wajar");
+      error.statusCode = 400;
+      throw error;
+    }
+    totalUncompressedSize += uSize;
+    if (totalUncompressedSize > MAX_XLSX_UNCOMPRESSED_BYTES) {
+      const error = new Error("Berkas Excel terlalu besar setelah diekstrak");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  return { totalUncompressedSize, entryCount: entries.length };
+}
 
 /**
  * Mengecek apakah buffer diawali oleh magic bytes OLE/CFB (D0CF11E0).
@@ -220,6 +273,9 @@ export async function readFileBuffer({ buffer, fileName, password = null }) {
 
   // Jika XLSX atau berkas Excel
   try {
+    // Validasi batas dekompresi ZIP untuk mencegah zip bomb
+    await validateXlsxZipStructure(workingBuffer);
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(workingBuffer);
 
