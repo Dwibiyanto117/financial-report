@@ -34,7 +34,7 @@ export function getBankTemplate(rawCode) {
   const clean = String(rawCode).trim().toUpperCase();
   const found = BANK_TEMPLATES.find((b) => b.code === clean);
   if (!found) {
-    const error = new Error(`Kode bank "${rawCode}" tidak valid. Pilihan yang didukung: ${BANK_TEMPLATES.map((b) => b.code).join(", ")}`);
+    const error = new Error(`Kode bank tidak valid. Pilihan yang didukung: ${BANK_TEMPLATES.map((b) => b.code).join(", ")}`);
     error.statusCode = 400;
     throw error;
   }

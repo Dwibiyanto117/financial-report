@@ -1,35 +1,34 @@
 /**
  * Comprehensive Synthetic Verification Test Suite for Module M8.2
  *
- * Menguji skenario sesuai spesifikasi M8.2 Batch 5:
- * 1. Rate limit: Verifikasi mekanisme rate limit upload
- * 2. Usulan rekening: 4 digit akhir nomor rekening berkas
+ * Menguji skenario sesuai spesifikasi M8.2 Batch 5 (rate limit diuji di verify-rate-limit.js):
+ * 1. Usulan rekening: 4 digit akhir nomor rekening berkas
  *    - Cocok 1 rekening -> suggested_account terisi
  *    - Cocok >= 2 rekening -> null
  *    - Tidak cocok -> null dan ada warning non-blocking
  *    - Rekening milik user lain tidak pernah bocor
- * 3. Belajar aturan (learn_rule):
+ * 2. Belajar aturan (learn_rule):
  *    - commit dengan learn_rule: true membuat aturan kategori
  *    - preview berikutnya memakai aturan itu (suggestion_source: "user_rule")
  *    - keyword sama memperbarui aturan yang ada (upsert semantics)
  *    - batas 500 aturan per user dihormati tanpa crash
  *    - rollback batch import TIDAK menghapus aturan kategori
- * 4. PUT /api/category-rules/:id:
+ * 3. PUT /api/category-rules/:id:
  *    - ubah valid -> 200
  *    - konflik UNIQUE (keyword sudah dipakai aturan lain) -> 400 bersih
  *    - ID tidak valid / bukan angka -> 400 bersih
  *    - aturan milik user lain -> 404 bersih
- * 5. Prioritas keyword terpanjang (longest-keyword rule precedence)
- * 6. Template Standar FinReport:
+ * 4. Prioritas keyword terpanjang (longest-keyword rule precedence)
+ * 5. Template Standar FinReport:
  *    - Unduh template XLSX & CSV untuk seluruh allowlist bank
  *    - Validasi parameter bank / format salah -> 400
  *    - Roundtrip upload & preview template (Date object UTC, format Indonesia, Kategori template)
- *    - Uji invariansi zona waktu: verifikasi parsing tanggal identik di UTC dan Asia/Jakarta
+ *    - Uji invariansi zona waktu round-trip XLSX (UTC, Asia/Jakarta, America/Los_Angeles, Pacific/Kiritimati)
  *    - Baris tidak valid -> dicatat di warnings dan summary.invalid
  *    - Semua baris tidak valid -> 400
  *    - 2000 baris lolos, 2001 baris ditolak
  *    - Commit & rollback hasil template bekerja dengan benar
- * 7. Regresi baseline: Verifikasi user lama (budi@example.com) tidak terganggu
+ * 6. Regresi baseline: Verifikasi seluruh user non-uji tidak terganggu (saldo hitung & transaksi konsisten)
  *
  * Mendukung argumen:
  *   node backend/scripts/verify-m8.2.js [--clean]
@@ -39,10 +38,15 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import assert from "assert";
+import { spawnSync } from "child_process";
+import { fileURLToPath } from "url";
 import ExcelJS from "exceljs";
 import prisma from "../src/config/prisma.js";
 import { parse as parseTemplateGrid } from "../src/services/import/parsers/template.js";
 import { BANK_TEMPLATES } from "../src/services/import/templates/bankTemplates.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const BASE_URL = process.env.API_BASE_URL || "http://localhost:5000/api";
 const TEST_EMAIL = process.env.M8_TEST_EMAIL || "m8test2@example.com";
@@ -102,13 +106,41 @@ async function runM82Verification() {
   userWalletId = walletAcc.id;
   console.log(`User ID: ${testUserId}, Bank ID: ${userAccountId}, Wallet ID: ${userWalletId}`);
 
-  // Catat baseline saldo budi@example.com untuk uji regresi di akhir
-  const budiUser = await prisma.user.findUnique({
-    where: { email: "budi@example.com" },
-    include: { accounts: true }
+  // Catat baseline data seluruh user non-uji (transaksi dan saldo hitung)
+  const nonTestUsers = await prisma.user.findMany({
+    where: { email: { not: TEST_EMAIL } },
+    include: {
+      accounts: {
+        include: {
+          transactions: true
+        }
+      }
+    }
   });
-  const budiKasUtama = budiUser ? budiUser.accounts.find((a) => a.name === "Kas Utama") : null;
-  const budiInitialBalance = budiKasUtama ? Number(budiKasUtama.openingBalance) : null;
+
+  const baselineUserStates = nonTestUsers.map((u) => {
+    let totalTransactions = 0;
+    const accounts = u.accounts.map((acc) => {
+      totalTransactions += acc.transactions.length;
+      const txSum = acc.transactions.reduce((sum, tx) => {
+        return tx.type === "INCOME" ? sum + Number(tx.amount) : sum - Number(tx.amount);
+      }, 0);
+      const computedBalance = Number(acc.openingBalance) + txSum;
+      return {
+        id: acc.id,
+        name: acc.name,
+        openingBalance: Number(acc.openingBalance),
+        computedBalance,
+        txCount: acc.transactions.length
+      };
+    });
+    return {
+      userId: u.id,
+      email: u.email,
+      totalTransactions,
+      accounts
+    };
+  });
 
   // ==================================================================
   // SKENARIO 1: Usulan Rekening Tujuan (Batch M8.2-1)
@@ -423,27 +455,53 @@ async function runM82Verification() {
   console.log("PASSED - Rollback template mutasi sukses membersihkan transaksi.");
 
   // ==================================================================
-  // SKENARIO 5: Uji Invariansi Zona Waktu (UTC vs Asia/Jakarta)
+  // SKENARIO 5: Uji Invariansi Zona Waktu (Round-trip XLSX Multi-Timezone)
   // ==================================================================
-  console.log("\n[Skenario 5] Uji invariansi zona waktu pada parseTemplateGrid...");
-  // Verifikasi langsung ke fungsi parser unit parseTemplateGrid dengan mock grid
-  const mockGrid = [
-    ["Tanggal", "Waktu", "Keterangan", "Jenis", "Nominal", "Saldo", "Kategori"],
-    [new Date("2026-08-01T00:00:00.000Z"), "10:00", "Transaksi Tanggal 1", "MASUK", 100000, 100000, ""],
-    [new Date("2026-08-31T23:59:59.000Z"), "23:59", "Transaksi Tanggal 31", "KELUAR", 50000, 50000, ""]
-  ];
+  console.log("\n[Skenario 5] Uji invariansi zona waktu round-trip XLSX (UTC, Asia/Jakarta, America/Los_Angeles, Pacific/Kiritimati)...");
+  const timezones = ["UTC", "Asia/Jakarta", "America/Los_Angeles", "Pacific/Kiritimati"];
+  const tzResults = [];
 
-  const parsedGrid = parseTemplateGrid({ grid: mockGrid });
-  const d0 = parsedGrid.rows[0].date instanceof Date
-    ? parsedGrid.rows[0].date.toISOString().slice(0, 10)
-    : String(parsedGrid.rows[0].date).slice(0, 10);
-  const d1 = parsedGrid.rows[1].date instanceof Date
-    ? parsedGrid.rows[1].date.toISOString().slice(0, 10)
-    : String(parsedGrid.rows[1].date).slice(0, 10);
+  for (const tz of timezones) {
+    const cp = spawnSync(process.execPath, [path.join(__dirname, "test-tz-template.js")], {
+      env: { ...process.env, TZ: tz },
+      encoding: "utf8"
+    });
+    assert.strictEqual(cp.status, 0, `Eksekusi test-tz-template.js pada TZ=${tz} gagal:\n${cp.stderr}`);
+    const outJson = JSON.parse(cp.stdout.trim());
+    tzResults.push({ tz, data: outJson });
+  }
 
-  assert.strictEqual(d0, "2026-08-01");
-  assert.strictEqual(d1, "2026-08-31");
-  console.log("PASSED - Tanggal diekstrak berbasis komponen UTC secara konsisten (tanpa geser hari).");
+  // Verifikasi seluruh timezone menghasilkan data identik
+  const baseTz = tzResults[0];
+  for (let i = 1; i < tzResults.length; i++) {
+    const comp = tzResults[i];
+    assert.deepStrictEqual(
+      comp.data,
+      baseTz.data,
+      `Hasil parsing pada TZ=${comp.tz} tidak identik dengan TZ=${baseTz.tz}`
+    );
+  }
+
+  // Verifikasi kebenaran isi hasil parsing
+  const parsedRows = baseTz.data.rows;
+  assert.strictEqual(parsedRows.length, 4, "Harus menghasilkan 4 baris transaksi");
+  // Baris 1: Date object UTC -> tanggal tetap 2026-08-15, waktu 09:30:00 (komponen UTC Date object)
+  assert.strictEqual(parsedRows[0].date, "2026-08-15");
+  assert.strictEqual(parsedRows[0].time, "09:30:00");
+  // Baris 2: dd/mm/yyyy -> 2026-08-16, waktu 14:15:00
+  assert.strictEqual(parsedRows[1].date, "2026-08-16");
+  assert.strictEqual(parsedRows[1].time, "14:15:00");
+  // Baris 3: ISO -> 2026-08-17, waktu 08:45:10
+  assert.strictEqual(parsedRows[2].date, "2026-08-17");
+  assert.strictEqual(parsedRows[2].time, "08:45:10");
+  // Baris 4: waktu rusak -> null dan ada warning
+  assert.strictEqual(parsedRows[3].date, "2026-08-18");
+  assert.strictEqual(parsedRows[3].time, null);
+  assert.ok(
+    baseTz.data.warnings.some((w) => w.includes("bukan_waktu_valid")),
+    "Harus ada peringatan untuk format waktu tidak valid pada baris 4"
+  );
+  console.log("PASSED - Round-trip XLSX identik dan presisi di seluruh zona waktu (UTC, WIB, US PDT, Kiritimati).");
 
   // ==================================================================
   // SKENARIO 6: Uji Batas 2000 Baris pada Template
@@ -464,23 +522,47 @@ async function runM82Verification() {
   console.log("PASSED - Template 2001 baris ditolak HTTP 400.");
 
   // ==================================================================
-  // SKENARIO 7: Regresi Baseline User Lama (budi@example.com)
+  // SKENARIO 7: Regresi Baseline Seluruh User Non-Uji
   // ==================================================================
-  console.log("\n[Skenario 7] Uji regresi data baseline budi@example.com...");
-  const budiUserAfter = await prisma.user.findUnique({
-    where: { email: "budi@example.com" },
-    include: { accounts: true }
-  });
-  if (budiUserAfter && budiKasUtama) {
-    const budiKasUtamaAfter = budiUserAfter.accounts.find((a) => a.name === "Kas Utama");
+  console.log("\n[Skenario 7] Uji regresi data baseline seluruh user non-uji...");
+  for (const base of baselineUserStates) {
+    const userAfter = await prisma.user.findUnique({
+      where: { id: base.userId },
+      include: {
+        accounts: {
+          include: {
+            transactions: true
+          }
+        }
+      }
+    });
+    assert.ok(userAfter, `User non-uji ${base.email} harus tetap ada`);
+    let currentTotalTx = 0;
+    for (const accBase of base.accounts) {
+      const accAfter = userAfter.accounts.find((a) => a.id === accBase.id);
+      assert.ok(accAfter, `Rekening ${accBase.name} milik ${base.email} harus tetap ada`);
+      currentTotalTx += accAfter.transactions.length;
+      const txSum = accAfter.transactions.reduce((sum, tx) => {
+        return tx.type === "INCOME" ? sum + Number(tx.amount) : sum - Number(tx.amount);
+      }, 0);
+      const currentComputedBalance = Number(accAfter.openingBalance) + txSum;
+      assert.strictEqual(
+        currentComputedBalance,
+        accBase.computedBalance,
+        `Saldo hitung rekening ${accBase.name} milik ${base.email} berubah dari ${accBase.computedBalance} menjadi ${currentComputedBalance}`
+      );
+      assert.strictEqual(
+        accAfter.transactions.length,
+        accBase.txCount,
+        `Jumlah transaksi rekening ${accBase.name} milik ${base.email} berubah`
+      );
+    }
     assert.strictEqual(
-      Number(budiKasUtamaAfter.openingBalance),
-      budiInitialBalance,
-      "Saldo Kas Utama budi@example.com tidak boleh berubah"
+      currentTotalTx,
+      base.totalTransactions,
+      `Total transaksi user ${base.email} berubah dari ${base.totalTransactions} menjadi ${currentTotalTx}`
     );
-    console.log(`PASSED - Saldo Kas Utama budi@example.com tetap ${budiInitialBalance.toLocaleString("id-ID")}.`);
-  } else {
-    console.log("INFO - User budi@example.com tidak ditemukan di database, skipping periksa saldo.");
+    console.log(`PASSED - Integritas user non-uji ${base.email} utuh (saldo hitung & ${base.totalTransactions} transaksi konsisten).`);
   }
 
   console.log("\n==================================================================");

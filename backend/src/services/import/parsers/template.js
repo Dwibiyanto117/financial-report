@@ -224,14 +224,31 @@ export function parse(ctx) {
 
     // 2. Validasi Waktu (Opsional)
     let parsedTime = null;
-    if (colTime !== -1 && row[colTime] !== null && row[colTime] !== undefined) {
-      const rawTimeStr = String(row[colTime]).trim();
-      if (rawTimeStr) {
-        try {
-          const tObj = normalizeDate(`2000-01-01 ${rawTimeStr}`);
-          parsedTime = tObj.time;
-        } catch {
-          parsedTime = null;
+    if (colTime !== -1 && row[colTime] !== null && row[colTime] !== undefined && row[colTime] !== "") {
+      const rawTime = row[colTime];
+      if (rawTime instanceof Date) {
+        if (!isNaN(rawTime.getTime())) {
+          const hh = String(rawTime.getUTCHours()).padStart(2, "0");
+          const mm = String(rawTime.getUTCMinutes()).padStart(2, "0");
+          const ss = String(rawTime.getUTCSeconds()).padStart(2, "0");
+          parsedTime = `${hh}:${mm}:${ss}`;
+        } else {
+          warnings.push(`Baris ${sheetRowNum}: Format waktu tidak valid ("${rawTime}")`);
+        }
+      } else {
+        const rawTimeStr = String(rawTime).trim();
+        if (rawTimeStr) {
+          try {
+            const tObj = normalizeDate(`2000-01-01 ${rawTimeStr}`);
+            if (tObj && tObj.time) {
+              parsedTime = tObj.time;
+            } else {
+              warnings.push(`Baris ${sheetRowNum}: Format waktu tidak valid ("${rawTimeStr}")`);
+            }
+          } catch {
+            warnings.push(`Baris ${sheetRowNum}: Format waktu tidak valid ("${rawTimeStr}")`);
+            parsedTime = null;
+          }
         }
       }
     }
