@@ -112,8 +112,20 @@
 
 ---
 
-## Milestone Selanjutnya (Next: M8.4)
-- [ ] **Batch M8.4: Adapter E-Wallet & Parser BCA / PDF**:
-  - [ ] Adapter format e-wallet (GoPay, OVO, Dana, ShopeePay) saat sampel mutasi CSV/XLSX tersedia.
-  - [ ] Parser BCA dan/atau parser PDF statement bank (menunggu penyediaan sampel berkas).
-  - [ ] Audit keamanan menyeluruh pipeline impor mutasi.
+## Milestone Selanjutnya (Next: M8.4 Statement Import Track A & Track B)
+- [ ] **M8.4 Jalur A: Audit Keamanan, Mesin PDF Generik, & Kesiapan Registry Parser (Aktif)**:
+  - [ ] M8.4-0: Persiapan dokumen (protokol penyerahan sampel & penyelarasan task TASKS.md).
+  - [ ] M8.4-1: Audit keamanan pipeline import:
+    - [ ] 1a: Uji regresi keamanan formula pada ekspor Excel (`exceljs` menulis sel teks tanpa formula literal).
+    - [ ] 1b: Batasan dekompresi XLSX (proteksi zip bomb: batas entri tak-terkompresi maks 50 MB & maks 2000 entri).
+    - [ ] 1c: Proteksi rate limiting pada endpoint `POST /api/imports/:id/commit`.
+    - [ ] 1d: Audit dependensi npm (`npm audit`) tanpa major upgrade.
+    - [ ] 1e: Matriks uji akses antar-pengguna (IDOR) & pemeriksaan sanitasi log server (zero data leak).
+    - [ ] 1f: Laporan audit keamanan M8.4 di `dev-docs/modules/import.md`.
+  - [ ] M8.4-2: Mesin baca PDF generik (`pdfjs-dist` legacy, batas 50 halaman, timeout 15 detik, fixture sintetis `pdfmake`, uji unit pengelompokan baris/sel).
+  - [ ] M8.4-3: Registry parser & format unggah dinamis (endpoint `GET /api/imports/parsers`, allowlist upload diturunkan dari registry, penguncian format `.pdf` di Jalur A).
+  - [ ] M8.4-4: Verifikasi komprehensif Jalur A & sinkronisasi dokumentasi proyek.
+- [ ] **M8.4 Jalur B: Parser Bank & Adapter Dompet Digital (Menunggu Ketersediaan Sampel)**:
+  - [ ] B1: Analisis sampel nyata & parser BCA (PDF statement) berbasis `pdfReader`.
+  - [ ] B2: Analisis sampel & adapter dompet digital (Dana, OVO, GoPay) via format ekspor / template.
+  - [ ] B3: Verifikasi akhir Jalur B, aktivasi unggah `.pdf`, dan penutup milestone M8.

@@ -146,3 +146,28 @@ Hierarki penentuan kategori per baris transaksi:
 - **Anti-CSV Injection:** Sel yang diawali `=`, `+`, `-`, atau `@` dinetralkan dengan menambahkan tanda petik tunggal (`'`).
 - **Data Isolation:** Seluruh query difilter berdasarkan `userId`, dan `account_id` wajib diverifikasi kepemilikannya.
 - **Payload Cleanup:** Kolom `parsed_payload` di `import_batches` dikosongkan segera setelah batch di-commit.
+
+---
+
+## 6. Protokol Penyerahan Sampel (Intake Protocol)
+
+Untuk menjaga kerahasiaan data finansial nyata dan kepatuhan repository publik, setiap pengujian atau pengembangan parser terhadap sampel mutasi rekening bank/dompet digital nyata wajib mengikuti protokol ketat:
+
+1. **Penyimpanan di Luar Repository**:
+   - Seluruh berkas sampel nyata (misalnya PDF BCA, e-Statement, ekspor riwayat) **wajib disimpan di luar direktori repositori proyek** (misalnya di folder sementara atau direktori lokal pengguna di luar git tree).
+   - Jalur berkas diberikan secara dinamis melalui variabel lingkungan:
+     - `BCA_SAMPLE_PATH`
+     - `DANA_SAMPLE_PATH`
+     - `OVO_SAMPLE_PATH`
+     - `GOPAY_SAMPLE_PATH`
+   - Kredensial / password pembuka berkas terenkripsi diberikan melalui variabel lingkungan:
+     - `BCA_SAMPLE_PASSWORD`
+     - `MANDIRI_SAMPLE_PASSWORD`
+     - `<NAMA>_SAMPLE_PASSWORD`
+   - Dilarang keras menuliskan path absolut, nomor rekening asli, atau password sampel pada kode sumber, log terminal, obrolan chat, maupun pesan commit.
+2. **Isolasi Analisis Struktur**:
+   - Analisis terhadap berkas sampel hanya mendokumentasikan karakteristik struktur berkas (format lembar, header tabel, posisi kolom debit/kredit, format tanggal/angka, rekonsiliasi saldo).
+   - Dilarang mencatat nama pemilik rekening, nomor rekening asli, saldo riil, atau catatan transaksi pribadi ke dalam dokumentasi proyek.
+3. **Pengujian Berkelanjutan via Fixture Sintetis**:
+   - Seluruh uji otomatis regresi (*automated regression suite*) di CI/CD atau repositori wajib menggunakan **fixture sintetis fiktif** (dihasilkan melalui skrip generator `seed-m8-testdata.js`) yang meniru struktur sampel tanpa menggunakan data nyata.
+   - Pengujian terhadap berkas sampel nyata bersifat opsional (*conditional opt-in*) dan otomatis dilewati jika variabel lingkungan path berkas tidak didefinisikan.
