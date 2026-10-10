@@ -166,7 +166,7 @@ export default function TemplateDownloadModal({ isOpen, onClose }) {
             {/* Info Box */}
             <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
               <p className="font-semibold">Petunjuk Pengisian:</p>
-              <p>Isi kolom Tanggal, Waktu (opsional), Keterangan, Jenis (INCOME / EXPENSE), dan Nominal. Jangan mengubah nama sheet atau baris header template.</p>
+              <p>Isi kolom Tanggal, Waktu (opsional), Keterangan, Jenis (MASUK / KELUAR; sinonim seperti KREDIT/DEBIT atau CR/DB juga diterima), dan Nominal. Jangan mengubah nama sheet atau baris header template.</p>
             </div>
           </div>
 
