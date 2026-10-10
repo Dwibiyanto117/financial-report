@@ -18,7 +18,8 @@ Aplikasi pencatatan keuangan personal berbasis web responsif yang memberikan kem
 - **Ekspor Laporan**:
   - Unduh berkas spreadsheet **Excel (.xlsx)** terformat rapi dengan kolom Rekening dan kalkulasi total.
   - Unduh berkas dokumen **PDF (.pdf)** siap cetak lengkap dengan ringkasan visual per periode.
-- **Statement Import Mutasi Rekening (Backend siap, UI menyusul M8.3)**:
+- **Statement Import Mutasi Rekening (v0.5.0)**:
+  - **Antarmuka Pengguna Interaktif (`/import`)**: Alur bertahap dengan dropzone berkas drag & drop, tab pratinjau transaksi, dan tab riwayat batch impor dengan aksi rollback.
   - **Dukungan Format Fleksibel**: Menerima mutasi CSV, XLSX standar, dan e-Statement Bank Mandiri terenkripsi password (dekripsi aman di memori tanpa menulis berkas ke disk).
   - **Template Standar FinReport**: Unduhan template mutasi seragam (XLSX dan CSV) untuk semua bank (BCA, Mandiri, BRI, BNI, CIMB, Bank Jago) dan dompet digital (Dana, OVO, GoPay) dengan validasi dropdown dan petunjuk pengisian.
   - **Deteksi Cerdas Rekening Tujuan**: Rekomendasi otomatis rekening tujuan berdasarkan kecocokan 4 digit akhir nomor rekening berkas.
