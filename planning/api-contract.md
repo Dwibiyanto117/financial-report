@@ -280,10 +280,53 @@ Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.
   }
   ```
 
+### 3.1.2 Registry Parser Mutasi (`GET /api/imports/parsers`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Deskripsi**: Mengambil daftar adapter parser yang terdaftar secara dinamis di backend beserta metadata format berkas dan pemetaan.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Daftar parser import berhasil diambil",
+    "data": [
+      {
+        "name": "mandiri",
+        "label": "e-Statement Bank Mandiri (XLSX)",
+        "description": "Parser e-Statement resmi Bank Mandiri (format XLSX / terenkripsi password)",
+        "formats": ["xlsx"],
+        "requiresMapping": false
+      },
+      {
+        "name": "template",
+        "label": "Template Standar FinReport",
+        "description": "Format template mutasi resmi FinReport (CSV / XLSX)",
+        "formats": ["csv", "xlsx"],
+        "requiresMapping": false
+      },
+      {
+        "name": "generic",
+        "label": "Generik (Kustom)",
+        "description": "Format berkas mutasi generik dengan pemetaan kolom tanggal, keterangan, dan nominal",
+        "formats": ["csv", "xlsx"],
+        "requiresMapping": true
+      }
+    ]
+  }
+  ```
+
 ### 3.2 Pratinjau Mutasi (`POST /api/imports/preview`)
 - **Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
 - **Body**: `file` (File), `account_id` (Integer), opsional `parser`, `mapping` (JSON), `file_password` (String).
+- **Format Berkas**: Dinamis berdasarkan allowlist format registry parser (`csv`, `xlsx` pada Jalur A).
+- **Rate Limit**: 10 request per 10 menit per pengguna.
 - **Catatan Pembersihan Malas**: Saat endpoint ini dipanggil, batch berstatus `PREVIEW` milik user yang berusia lebih dari 24 jam otomatis ditandai `CANCELLED`.
+- **Error Response — Format .pdf Belum Didukung (400 Bad Request)**:
+  ```json
+  {
+    "success": false,
+    "message": "Format berkas .pdf belum didukung langsung. Gunakan berkas .csv/.xlsx atau unduh template standar FinReport."
+  }
+  ```
 - **Response (200 OK)**:
   ```json
   {
@@ -327,6 +370,7 @@ Detail lengkap: `planning/bank-import.md` bagian 8 dan `dev-docs/modules/import.
 
 ### 3.3 Commit Import Mutasi (`POST /api/imports/:id/commit`)
 - **Headers**: `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Rate Limit**: 30 request per 10 menit per pengguna (dapat disesuaikan via `IMPORT_COMMIT_RATE_LIMIT_MAX`).
 - **Body**:
   ```json
   {

@@ -1,7 +1,7 @@
 # CURRENT STATE — FinReport
 
-> **Last Updated:** 2026-10-10
-> **Phase:** M8.3 Selesai (Frontend UI Statement Import & Backend Support) — v0.5.0
+> **Last Updated:** 2026-10-11
+> **Phase:** M8.4 Jalur A Selesai (Audit Keamanan, Mesin PDF Generik, Parser Registry) — v0.5.1
 
 ---
 
@@ -236,5 +236,47 @@ Antarmuka pengguna penuh untuk alur impor mutasi (`/import`) serta dukungan back
   - F2: Klarifikasi jumlah baris riwayat setelah rollback (menampilkan `0 / total` dengan keterangan `{importedRows} transaksi dibatalkan` atau `Pratinjau dibuang`) dan batch pratinjau (`- / total` dengan keterangan `Belum disimpan`) melalui helper `getBatchRowCountDisplay` di `importHelpers.js`.
   - F3: Sinkronisasi menyeluruh dokumentasi `dev-docs/ai/*` dan dokumen planning.
   - F4: Investigasi ukuran bundle Vite (tercatat sudah 726 kB sebelum M8.3, 799 kB setelah M8.3; usulan `React.lazy` didokumentasikan di `TECHNICAL_DEBT.md`).
+
+---
+
+## Batch M8.4 — Audit Keamanan, Mesin PDF Generik & Kesiapan Registry Parser (2026-10-11)
+
+Eksekusi Jalur A (persiapan, pengerasan keamanan, PDF engine, dan parser registry) selesai 100% dan terverifikasi penuh:
+
+- [x] **Protokol Penyerahan Sampel & Persiapan (Batch M8.4-0)**:
+  - Protokol intake sampel bank nyata didokumentasikan di `dev-docs/modules/import.md` (lokasi di luar repo proyek, injeksi via path env, larangan mencatat data rahasia/PTE).
+  - Penyelarasan lingkup task M8.4 di `TASKS.md` (hanya allowlist bank resmi, tanpa ShopeePay).
+- [x] **Audit Keamanan Pipeline Import (Batch M8.4-1)**:
+  - **1a (Formula Injection Ekspor)**: Uji regresi membuktikan OpenXML (`exceljs`) menulis sel teks murni (`<is><t>` / `<v>` di `sheet1.xml` dan `<si><t>` di `sharedStrings.xml`) tanpa elemen formula `<f>`. Skrip `test-export-formula-m8.4.js` lulus. Catatan kewajiban netralisasi formula untuk ekspor CSV masa depan dicatat di `dev-docs/modules/import.md`.
+  - **1b (Batas Dekompresi XLSX / Zip Bomb)**: Pustaka `jszip` dipasang. Fungsi `validateXlsxZipStructure` di `reader.js` memeriksa arsip sebelum dekompresi: batas total uncompressed size 50 MB (`MAX_XLSX_UNCOMPRESSED_BYTES`) dan batas entri ZIP 2000 (`MAX_XLSX_ZIP_ENTRIES`), berlaku untuk berkas XLSX biasa maupun hasil dekripsi OLE/CFB. Ditolak HTTP 400 bersih.
+  - **1c (Rate Limit Commit)**: Middleware `importCommitLimiter` (30 req / 10 menit per user) ditambahkan ke `POST /api/imports/:id/commit`. Terintegrasi dengan placeholder env `IMPORT_COMMIT_RATE_LIMIT_MAX`.
+  - **1d (Audit Dependensi)**: `npm audit` dijalankan. Paket `source-map-js` diperbarui ke `1.2.2` di frontend. Dependensi backend (officecrypto-tool, exceljs, express-rate-limit) terverifikasi aman di jalur produksi.
+  - **1e (Matriks Uji IDOR & Audit Log)**: Matriks isolasi multi-user diuji pada 8 skenario endpoints import & category-rules (`test-idor-m8.4.js`) dengan hasil seluruhnya HTTP 404/400. Audit kode membuktikan nol kebocoran log data berkas/password.
+  - **1f (Laporan Audit)**: Bagian 7 "Audit Keamanan M8.4" dan checklist Part I relevan didokumentasikan di `dev-docs/modules/import.md`.
+- [x] **Mesin Baca PDF Generik (Batch M8.4-2)**:
+  - Pustaka `pdfjs-dist@4.10.38` (legacy build dengan tambalan kerentanan CVE-2024-4367) dipasang.
+  - Modul `backend/src/services/import/pdf/pdfReader.js`:
+    - Pemrosesan in-memory berbasis Buffer, pemeriksaan signature `%PDF-`.
+    - Flag pengerasan: `isEvalSupported: false`, `disableFontFace: true`, `verbosity: 0`.
+    - Batas keamanan: maks 50 halaman, batas waktu parsing 15 detik, batas memori 5 MB.
+    - Penanganan PDF scan (tanpa lapisan teks) ditolak 400 dengan pesan informatif.
+    - Penanganan enkripsi password: galat terstruktur `errors: [{ field: "file_password" }]` yang kompatibel dengan modal password frontend.
+    - Algoritma pengelompokan baris dan kolom cerdas: toleransi vertikal 3pt, deteksi gap horizontal dinamis (ambang 8pt), penggabungan potongan teks (fragment merging).
+    - Jaminan pelepasan memori `destroy()` selalu dieksekusi di blok `finally`.
+  - Integrasi cabang PDF di `reader.js` dan penerusan `ctx.pdf` ke parser.
+  - Perluasan `seed-m8-testdata.js` untuk membuat 7 fixtures PDF sintetis via `pdfmake`.
+  - Skrip uji `test-pdf-reader-m8.4.js` (4 unit test + 9 integration test) lulus 100%.
+- [x] **Registry Parser & Format Unggah Dinamis (Batch M8.4-3)**:
+  - Metadata `formats` dan `requiresMapping` dideklarasikan pada parser adapter (`mandiri`, `template`, `generic`).
+  - Ekspor fungsi registry `listParsers()`, `getAllowedUploadFormats()`, `registerParser()`, dan `unregisterParser()` di `parsers/index.js`.
+  - Endpoint baru `GET /api/imports/parsers` menyajikan daftar parser dan format yang didukung.
+  - Middleware upload (`upload.middleware.js`) menurunkan format yang diizinkan secara dinamis dari `getAllowedUploadFormats()`. Berkas `.pdf` ditolak HTTP 400 dengan pesan panduan pengalihan ke template selama belum ada parser PDF terdaftar.
+  - Frontend (`Import.jsx` & `ImportDropzone.jsx`) memuat konfigurasi parser secara dinamis dari server saat inisialisasi, merender opsi radio dinamis, dan meneruskan `acceptedFormats` ke dropzone.
+  - Mekanisme switch ke Jalur B terbukti dapat langsung aktif saat parser PDF baru didaftarkan via `registerParser`.
+- [x] **Verifikasi Akhir & Baseline Integrity (Batch M8.4-4)**:
+  - Seluruh rangkaian uji sintetis M8.1, M8.2, M8.3, dan M8.4 lulus 100%.
+  - Database row count kembali tepat ke baseline: `{"users":2,"tx":3,"acc":2,"rules":0,"batches":0}`.
+  - Skema database (`schema.prisma`) tidak berubah. Sanitasi teks rahasia lulus bersih.
+
 
 

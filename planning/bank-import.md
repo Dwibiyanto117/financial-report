@@ -1,10 +1,10 @@
 # Multi-Account & Statement Import — Post-MVP Feature Spec (FinReport)
 
-> **Status:** PROPOSED — menunggu review user sebelum implementasi
+> **Status:** IMPLEMENTED (M8.1-M8.4 Jalur A Selesai; Jalur B menunggu sampel riil BCA PDF & e-wallet)
 > **Modul:** MOD-07: Account (multi rekening) dan MOD-08: Statement Import
-> **Pendekatan:** Import mutasi (CSV/XLSX) per rekening. Tanpa kredensial bank, tanpa API pihak ketiga.
-> **Keputusan user:** prioritas BCA, Mandiri, serta Dana, OVO, GoPay. PDF ditunda ke fase berikutnya (tetap terbuka jika ada cara parsing yang andal). Sistem multi rekening: 1 rekening = 1 institusi, satu institusi dapat memiliki banyak rekening.
-> **Fase berikutnya:** adapter Open Finance API dan parser PDF memakai pipeline yang sama.
+> **Pendekatan:** Import mutasi (CSV/XLSX) per rekening + Generic PDF Reader engine. Tanpa kredensial bank, tanpa API pihak ketiga.
+> **Keputusan user:** Prioritas BCA, Mandiri, serta Dana, OVO, GoPay. Mandiri XLSX & Template standar selesai; BCA PDF & e-wallet di Jalur B menunggu sampel. PDF engine generik siap di memori.
+> **Fase berikutnya:** Jalur B (Parser BCA PDF & adapter dompet digital saat sampel nyata tersedia).
 
 ---
 
@@ -54,10 +54,11 @@ Setiap format = 1 file di `backend/src/services/import/parsers/` dengan kontrak 
 
 | Adapter | Status | Catatan |
 |---------|--------|---------|
-| `generic` | Dijamin | Kolom dipetakan user: tanggal, deskripsi, debit/kredit atau nominal+tipe |
-| `bca` | Perlu sampel | Perkiraan kolom: Tanggal, Keterangan, Cabang, Jumlah (CR/DB), Saldo |
-| `mandiri` | Struktur dari sampel (screenshot); belum diuji dengan file asli | Lihat bagian 5.1 |
-| `dana`, `ovo`, `gopay` | Belum terverifikasi | Ketersediaan ekspor riwayat dari aplikasi belum dipastikan (bisa berupa laporan via e-mail, atau tidak ada ekspor sama sekali). Sampai ada file nyata dipakai jalur `generic` (mis. hasil salin ke spreadsheet). |
+| `template` | Selesai (M8.2) | Template standar FinReport (CSV / XLSX) untuk semua bank & dompet digital |
+| `mandiri` | Selesai (M8.1) | e-Statement Bank Mandiri (XLSX / terenkripsi password Agile ECMA-376) |
+| `generic` | Selesai (M8.1) | Kolom dipetakan user: tanggal, deskripsi, debit/kredit atau nominal+tipe (CSV / XLSX) |
+| `bca` | Jalur B | Menunggu sampel nyata PDF mutasi BCA (mesin PDF generik sudah siap di M8.4 Jalur A) |
+| `dana`, `ovo`, `gopay` | Jalur B | Menunggu sampel nyata ekspor e-wallet; saat ini didukung penuh lewat template standar |
 
 ### 5.1 Struktur e-Statement Mandiri (dari sampel Agu 2026)
 - Nama file `e-Statement_XXXXXXXXX<4 digit akhir>_<periode>`. 4 digit terakhir dipakai untuk mengusulkan rekening tujuan.

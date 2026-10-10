@@ -12,3 +12,4 @@ Daftar ringkasan commit:
 - 2026-10-10: `fix(import): post-M8.3 refinements (batches M8.3-F1 to M8.3-F4)`
 - 2026-10-10: `docs(planning): add M8.4 implementation plan (track A active, track B gated on samples)`
 - 2026-10-10: `docs(planning): correct export formula-injection risk in M8.4 plan`
+- 2026-10-11: `feat(import): statement import security audit, generic pdf reader, and parser registry (batches M8.4-0 to M8.4-4)`

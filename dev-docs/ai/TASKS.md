@@ -112,20 +112,20 @@
 
 ---
 
-## Milestone Selanjutnya (Next: M8.4 Statement Import Track A & Track B)
-- [ ] **M8.4 Jalur A: Audit Keamanan, Mesin PDF Generik, & Kesiapan Registry Parser (Aktif)**:
-  - [ ] M8.4-0: Persiapan dokumen (protokol penyerahan sampel & penyelarasan task TASKS.md).
-  - [ ] M8.4-1: Audit keamanan pipeline import:
-    - [ ] 1a: Uji regresi keamanan formula pada ekspor Excel (`exceljs` menulis sel teks tanpa formula literal).
-    - [ ] 1b: Batasan dekompresi XLSX (proteksi zip bomb: batas entri tak-terkompresi maks 50 MB & maks 2000 entri).
-    - [ ] 1c: Proteksi rate limiting pada endpoint `POST /api/imports/:id/commit`.
-    - [ ] 1d: Audit dependensi npm (`npm audit`) tanpa major upgrade.
-    - [ ] 1e: Matriks uji akses antar-pengguna (IDOR) & pemeriksaan sanitasi log server (zero data leak).
-    - [ ] 1f: Laporan audit keamanan M8.4 di `dev-docs/modules/import.md`.
-  - [ ] M8.4-2: Mesin baca PDF generik (`pdfjs-dist` legacy, batas 50 halaman, timeout 15 detik, fixture sintetis `pdfmake`, uji unit pengelompokan baris/sel).
-  - [ ] M8.4-3: Registry parser & format unggah dinamis (endpoint `GET /api/imports/parsers`, allowlist upload diturunkan dari registry, penguncian format `.pdf` di Jalur A).
-  - [ ] M8.4-4: Verifikasi komprehensif Jalur A & sinkronisasi dokumentasi proyek.
-- [ ] **M8.4 Jalur B: Parser Bank & Adapter Dompet Digital (Menunggu Ketersediaan Sampel)**:
+## Milestone M8.4 (Statement Import: Track A Selesai; Track B Menunggu Sampel)
+- [x] **M8.4 Jalur A: Audit Keamanan, Mesin PDF Generik, & Kesiapan Registry Parser (SELESAI - 2026-10-11)**:
+  - [x] M8.4-0: Persiapan dokumen (protokol penyerahan sampel & penyelarasan task TASKS.md).
+  - [x] M8.4-1: Audit keamanan pipeline import:
+    - [x] 1a: Uji regresi keamanan formula pada ekspor Excel (`exceljs` menulis sel teks tanpa formula literal).
+    - [x] 1b: Batasan dekompresi XLSX (proteksi zip bomb: batas entri tak-terkompresi maks 50 MB & maks 2000 entri).
+    - [x] 1c: Proteksi rate limiting pada endpoint `POST /api/imports/:id/commit` (30 req / 10 menit per user).
+    - [x] 1d: Audit dependensi npm (`npm audit`) tanpa major upgrade (`source-map-js` patched di frontend).
+    - [x] 1e: Matriks uji akses antar-pengguna (IDOR 8 skenario) & pemeriksaan sanitasi log server (zero data leak).
+    - [x] 1f: Laporan audit keamanan M8.4 di `dev-docs/modules/import.md`.
+  - [x] M8.4-2: Mesin baca PDF generik (`pdfjs-dist@4.10.38` legacy build patched CVE-2024-4367, batas 50 halaman, timeout 15 detik, fixture sintetis `pdfmake`, uji unit pengelompokan baris/sel).
+  - [x] M8.4-3: Registry parser & format unggah dinamis (endpoint `GET /api/imports/parsers`, allowlist upload diturunkan dari registry, penguncian format `.pdf` di Jalur A dengan pesan panduan).
+  - [x] M8.4-4: Verifikasi komprehensif Jalur A & sinkronisasi dokumentasi proyek.
+- [ ] **M8.4 Jalur B: Parser Bank & Adapter Dompet Digital (Menunggu Ketersediaan Sampel Riil)**:
   - [ ] B1: Analisis sampel nyata & parser BCA (PDF statement) berbasis `pdfReader`.
   - [ ] B2: Analisis sampel & adapter dompet digital (Dana, OVO, GoPay) via format ekspor / template.
   - [ ] B3: Verifikasi akhir Jalur B, aktivasi unggah `.pdf`, dan penutup milestone M8.
