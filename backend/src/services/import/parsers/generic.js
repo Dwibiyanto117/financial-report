@@ -17,6 +17,8 @@ import { normalizeAmount, normalizeDate, sanitizeCell } from "../normalize.js";
 
 export const name = "generic";
 export const label = "Format Kustom / CSV / Excel Generik";
+export const formats = ["csv", "xlsx"];
+export const requiresMapping = true;
 
 /**
  * Deteksi kecocokan parser generik.

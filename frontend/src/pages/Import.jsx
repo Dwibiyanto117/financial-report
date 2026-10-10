@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { getAccounts } from "../services/accountService";
-import { previewImport, commitImport } from "../services/importService";
+import { previewImport, commitImport, getParsers } from "../services/importService";
 import ImportDropzone from "../components/import/ImportDropzone";
 import TemplateDownloadModal from "../components/import/TemplateDownloadModal";
 import FilePasswordModal from "../components/import/FilePasswordModal";
@@ -23,11 +23,8 @@ import ImportReviewCards from "../components/import/ImportReviewCards";
 import ImportResultScreen from "../components/import/ImportResultScreen";
 import ImportHistoryList from "../components/import/ImportHistoryList";
 
-const PARSER_OPTIONS = [
-  { value: "auto", label: "Otomatis (Rekomendasi)", desc: "Deteksi otomatis berdasarkan struktur dan header berkas" },
-  { value: "mandiri", label: "Bank Mandiri (e-Statement)", desc: "Format berkas mutasi dan e-Statement Bank Mandiri" },
-  { value: "template", label: "Template Standar FinReport", desc: "Format CSV atau Excel seragam hasil unduhan FinReport" },
-  { value: "generic", label: "Generik (Kustom)", desc: "Tentukan sendiri nama kolom tanggal, keterangan, dan nominal" }
+const DEFAULT_PARSER_OPTIONS = [
+  { value: "auto", label: "Otomatis (Rekomendasi)", desc: "Deteksi otomatis berdasarkan struktur dan header berkas" }
 ];
 
 export default function Import() {
@@ -36,6 +33,8 @@ export default function Import() {
   // Master Data
   const [accounts, setAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [parserOptions, setParserOptions] = useState(DEFAULT_PARSER_OPTIONS);
+  const [acceptedFormats, setAcceptedFormats] = useState(["csv", "xlsx"]);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
   // Form State
@@ -64,9 +63,10 @@ export default function Import() {
   const loadInitialData = async () => {
     setLoadingInitial(true);
     try {
-      const [accRes, catRes] = await Promise.all([
+      const [accRes, catRes, parserRes] = await Promise.all([
         getAccounts({ include_archived: "false" }),
-        api.get("/categories")
+        api.get("/categories"),
+        getParsers()
       ]);
 
       if (accRes.success && Array.isArray(accRes.data)) {
@@ -79,8 +79,36 @@ export default function Import() {
       if (catRes.data?.success && Array.isArray(catRes.data.data)) {
         setCategories(catRes.data.data);
       }
+
+      if (parserRes?.success && Array.isArray(parserRes.data)) {
+        const serverParsers = parserRes.data;
+        const opts = [
+          {
+            value: "auto",
+            label: "Otomatis (Rekomendasi)",
+            desc: "Deteksi otomatis berdasarkan struktur dan header berkas"
+          },
+          ...serverParsers.map((p) => ({
+            value: p.name,
+            label: p.label,
+            desc: p.description,
+            formats: p.formats || [],
+            requiresMapping: !!p.requiresMapping
+          }))
+        ];
+        setParserOptions(opts);
+
+        const formatsSet = new Set();
+        serverParsers.forEach((p) => {
+          (p.formats || []).forEach((fmt) => formatsSet.add(fmt.toLowerCase()));
+        });
+        const formats = Array.from(formatsSet);
+        if (formats.length > 0) {
+          setAcceptedFormats(formats);
+        }
+      }
     } catch {
-      setPageError("Gagal memuat data pendukung (rekening dan kategori).");
+      setPageError("Gagal memuat konfigurasi parser import dari server. Silakan muat ulang halaman.");
     } finally {
       setLoadingInitial(false);
     }
@@ -335,6 +363,7 @@ export default function Import() {
                 file={selectedFile}
                 onFileSelect={(f) => setSelectedFile(f)}
                 onFileRemove={() => setSelectedFile(null)}
+                acceptedFormats={acceptedFormats}
               />
 
               {/* Pilihan Parser Adapter */}
@@ -343,7 +372,7 @@ export default function Import() {
                   Pilihan Parser Berkas
                 </label>
                 <div role="radiogroup" aria-labelledby="parser-options-label" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {PARSER_OPTIONS.map((opt) => {
+                  {parserOptions.map((opt) => {
                     const isSelected = selectedParser === opt.value;
                     return (
                       <button

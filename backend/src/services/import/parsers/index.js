@@ -79,13 +79,56 @@ export function detectParser(ctx) {
 }
 
 /**
- * Mengembalikan daftar parser yang tersedia untuk informasi klien.
+ * Mengembalikan daftar parser yang tersedia untuk informasi klien dan endpoint API.
  *
- * @returns {Array<{ name: string, label: string }>}
+ * @returns {Array<{ name: string, label: string, formats: string[], requiresMapping: boolean }>}
  */
 export function listParsers() {
   return Object.values(PARSERS).map((p) => ({
     name: p.name,
-    label: p.label || p.name
+    label: p.label || p.name,
+    formats: Array.isArray(p.formats) ? p.formats : ["xlsx"],
+    requiresMapping: Boolean(p.requiresMapping)
   }));
+}
+
+/**
+ * Mengambil daftar seluruh ekstensi/format yang diizinkan untuk diunggah,
+ * diturunkan secara dinamis dari gabungan format seluruh parser yang terdaftar.
+ *
+ * @returns {string[]} Contoh: ["csv", "xlsx"]
+ */
+export function getAllowedUploadFormats() {
+  const formatsSet = new Set();
+  for (const parser of Object.values(PARSERS)) {
+    if (Array.isArray(parser.formats)) {
+      for (const fmt of parser.formats) {
+        formatsSet.add(String(fmt).toLowerCase().replace(/^\./, "").trim());
+      }
+    }
+  }
+  return Array.from(formatsSet);
+}
+
+/**
+ * Mendaftarkan parser baru secara dinamis ke registry (in-memory).
+ * Berguna untuk ekstensi modular atau uji integrasi parser baru.
+ *
+ * @param {object} customParser
+ */
+export function registerParser(customParser) {
+  if (!customParser || !customParser.name) {
+    throw new Error("Parser harus memiliki properti name");
+  }
+  PARSERS[customParser.name.toLowerCase().trim()] = customParser;
+}
+
+/**
+ * Menghapus parser dari registry (in-memory).
+ *
+ * @param {string} parserName
+ */
+export function unregisterParser(parserName) {
+  if (!parserName) return;
+  delete PARSERS[String(parserName).toLowerCase().trim()];
 }

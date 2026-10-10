@@ -13,6 +13,8 @@ import { normalizeAmount, normalizeDate, sanitizeCell } from "../normalize.js";
 
 export const name = "mandiri";
 export const label = "e-Statement Bank Mandiri (XLSX)";
+export const formats = ["xlsx"];
+export const requiresMapping = false;
 
 /**
  * Deteksi kecocokan parser Mandiri berdasarkan nama file dan isi grid.

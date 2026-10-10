@@ -6,8 +6,8 @@
  */
 
 import multer from "multer";
+import { getAllowedUploadFormats } from "../services/import/parsers/index.js";
 
-const ALLOWED_EXTENSIONS = [".csv", ".xlsx"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const storage = multer.memoryStorage();
@@ -19,9 +19,23 @@ const multerInstance = multer({
     files: 1
   },
   fileFilter: (req, file, cb) => {
-    const ext = "." + (file.originalname.toLowerCase().split(".").pop() || "");
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      const error = new Error("Format berkas tidak didukung. Hanya file .csv dan .xlsx yang diperbolehkan");
+    const rawExt = (file.originalname.toLowerCase().split(".").pop() || "").trim();
+    const ext = "." + rawExt;
+    const allowedFormats = getAllowedUploadFormats();
+    const allowedExtensions = allowedFormats.map((f) => `.${f}`);
+
+    if (!allowedExtensions.includes(ext)) {
+      if (rawExt === "pdf") {
+        const error = new Error(
+          "Format berkas .pdf belum didukung langsung. Gunakan berkas .csv/.xlsx atau unduh template standar FinReport."
+        );
+        error.statusCode = 400;
+        return cb(error, false);
+      }
+      const allowedStr = allowedExtensions.join(", ");
+      const error = new Error(
+        `Format berkas tidak didukung. Hanya file ${allowedStr} yang diperbolehkan`
+      );
       error.statusCode = 400;
       return cb(error, false);
     }

@@ -10,6 +10,8 @@ import { normalizeAmount, normalizeDate, sanitizeCell } from "../normalize.js";
 
 export const name = "template";
 export const label = "Template Standar FinReport (XLSX / CSV)";
+export const formats = ["csv", "xlsx"];
+export const requiresMapping = false;
 
 /**
  * Deteksi skor kecocokan parser template.

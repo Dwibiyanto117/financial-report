@@ -202,4 +202,23 @@ export const getTemplateBanks = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/imports/parsers
+ * Mengambil daftar adapter parser yang terdaftar beserta format yang didukung.
+ */
+export const getParsers = async (req, res, next) => {
+  try {
+    const { listParsers } = await import("../services/import/parsers/index.js");
+    const parsers = listParsers();
+    return res.status(200).json({
+      success: true,
+      message: "Daftar parser import berhasil diambil",
+      data: parsers
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 

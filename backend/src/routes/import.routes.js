@@ -21,6 +21,9 @@ router.post("/:id/commit", importCommitLimiter, importController.commitImport);
 // Rollback batch yang telah di-commit
 router.delete("/:id", importController.rollbackImport);
 
+// Daftar parser import yang terdaftar beserta format yang didukung
+router.get("/parsers", importController.getParsers);
+
 // Daftar bank allowlist untuk template
 router.get("/template/banks", importController.getTemplateBanks);
 

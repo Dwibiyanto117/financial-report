@@ -3,7 +3,12 @@ import { UploadCloud, FileSpreadsheet, X, AlertCircle } from "lucide-react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
+export default function ImportDropzone({
+  file,
+  onFileSelect,
+  onFileRemove,
+  acceptedFormats = ["csv", "xlsx"]
+}) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [clientError, setClientError] = useState("");
   const inputRef = useRef(null);
@@ -13,8 +18,15 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
     if (!selectedFile) return;
 
     const ext = selectedFile.name.toLowerCase().split(".").pop();
-    if (!["csv", "xlsx"].includes(ext)) {
-      setClientError("Format berkas tidak didukung. Harap pilih berkas .csv atau .xlsx.");
+    if (!acceptedFormats.includes(ext)) {
+      if (ext === "pdf" && !acceptedFormats.includes("pdf")) {
+        setClientError(
+          "Format berkas .pdf belum didukung langsung. Gunakan berkas .csv/.xlsx atau unduh template standar FinReport."
+        );
+      } else {
+        const fmtList = acceptedFormats.map((f) => `.${f}`).join(" atau ");
+        setClientError(`Format berkas tidak didukung. Harap pilih berkas ${fmtList}.`);
+      }
       return;
     }
 
@@ -93,8 +105,15 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
           <input
             ref={inputRef}
             type="file"
-            aria-label="Pilih berkas mutasi CSV atau Excel"
-            accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv"
+            aria-label="Pilih berkas mutasi"
+            accept={acceptedFormats
+              .map((f) => {
+                if (f === "csv") return ".csv, text/csv";
+                if (f === "xlsx") return ".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                if (f === "pdf") return ".pdf, application/pdf";
+                return `.${f}`;
+              })
+              .join(", ")}
             onChange={handleInputChange}
             className="hidden"
           />
@@ -105,7 +124,7 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
             Seret berkas mutasi ke sini atau <span className="text-emerald-600 underline">pilih dari perangkat</span>
           </p>
           <p className="text-xs text-slate-500 mt-1 text-center">
-            Mendukung format .CSV dan .XLSX (maksimal 5 MB)
+            Mendukung format {acceptedFormats.map((f) => `.${f.toUpperCase()}`).join(" dan ")} (maksimal 5 MB)
           </p>
         </div>
       ) : (

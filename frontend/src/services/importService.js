@@ -81,6 +81,17 @@ export const getTemplateBanks = async () => {
 };
 
 /**
+ * GET /api/imports/parsers
+ * Mengambil daftar adapter parser yang terdaftar dari backend.
+ *
+ * @returns {Promise<object>}
+ */
+export const getParsers = async () => {
+  const res = await api.get("/imports/parsers");
+  return res.data;
+};
+
+/**
  * GET /api/imports/template?bank=<KODE>&format=xlsx|csv
  * Mengunduh berkas template mutasi FinReport menggunakan token autentikasi.
  *
