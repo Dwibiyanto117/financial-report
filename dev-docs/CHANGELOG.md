@@ -5,9 +5,29 @@ Versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
-## [0.5.0] — 2026-10-06
+## [0.5.0] — 2026-10-10
 
 ### Added
+- **Frontend UI Import Mutasi Rekening (`/import`)**:
+  - Halaman antarmuka `/import` responsif penuh (desktop, tablet, mobile 375px) dengan alur tab ganda: "Impor Baru" dan "Riwayat Impor".
+  - Navigasi rute terintegrasi: entri menu `Sidebar.jsx`, tombol akses mobile/desktop di header `Transactions.jsx` dan `Accounts.jsx`.
+  - Komponen dropzone berkas drag-and-drop (`ImportDropzone.jsx`) dengan validasi format (.csv/.xlsx), batas ukuran 5 MB, dan aksesibilitas keyboard.
+  - Modal unduhan template standar (`TemplateDownloadModal.jsx`) dengan pilihan bank dinamis dari backend, format XLSX/CSV via blob, dan dialog ARIA.
+  - Modal password berkas in-memory zero-logging (`FilePasswordModal.jsx`) dengan deteksi terstruktur `errors[].field === "file_password"`.
+  - Form pemetaan kolom kustom generik (`GenericMappingForm.jsx`) mendukung kolom nominal tunggal atau debit/kredit terpisah.
+  - Bar ringkasan pratinjau (`ImportSummaryBar.jsx`) dengan metrik total baris, transaksi baru, duplikat, tidak valid, dan collapsible panel peringatan.
+  - Banner usulan rekening tujuan (`suggested_account`) berdasarkan nomor rekening di berkas mutasi dengan tombol penerapan satu-klik.
+  - Tampilan tinjau transaksi desktop (`ImportReviewTable.jsx`) dan kartu mobile (`ImportReviewCards.jsx`) dengan aksi massal, seleksi baris, dropdown kategori sesuai tipe baris, badge asal rekomendasi kategori, badge informasional potensi transfer ("Mungkin Transfer"), dan opsi "Ingat aturan kata kunci" (`learn_rule`).
+  - Layar hasil commit (`ImportResultScreen.jsx`) dengan metrik transaksi tersimpan, duplikat, dilewati, aturan tersimpan, dan tautan kembali.
+  - Tab riwayat impor (`ImportHistoryList.jsx`) dengan penyaringan rekening, status filter (`ALL`, `COMMITTED`, `CANCELLED`, `PREVIEW`), aksi pembatalan pratinjau, dan rollback batch selesai.
+  - Modal konfirmasi rollback atomik (`RollbackConfirmModal.jsx`) dengan rincian transaksi batch dan pemulihan saldo.
+- **Dukungan Backend untuk UI (M8.3-1)**:
+  - Format terstruktur galat berkas terenkripsi `error.errors = [{ field: "file_password", message: ... }]`.
+  - Endpoint baru `GET /api/imports/template/banks` mengembalikan daftar allowlist institusi bank dan dompet digital dari `bankTemplates.js`.
+  - Dukungan pembatalan batch `PREVIEW` via `DELETE /api/imports/:id` menjadi status `CANCELLED` tanpa menghapus transaksi.
+  - Pembersihan malas (*lazy cleanup*) batch `PREVIEW` usang (> 24 jam) saat permintaan `POST /api/imports/preview`.
+  - Dukungan komponen UTC pada kolom Waktu objek Date Excel di `parsers/template.js` serta peringatan per baris jika format waktu tidak valid.
+  - Pembersihan nilai input mentah pada pesan galat 400 allowlist bank template.
 - **Usulan Rekening Tujuan (4 Digit Akhir)**:
   - Pada pratinjau import mutasi, sistem mencocokkan nomor rekening berkas (`parseResult.meta.accountNumberMasked`) dengan 4 digit akhir rekening aktif pengguna.
   - Jika tepat satu rekening cocok, dikembalikan `suggested_account: { id, name, institution, match: "last4" }`. Jika ambigu atau tidak cocok, diberikan peringatan non-blocking tanpa membatalkan pratinjau.
@@ -22,7 +42,10 @@ Versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - Endpoint `GET /api/imports/template` untuk mengunduh template standar XLSX dan CSV untuk institusi yang didukung (`BCA`, `MANDIRI`, `BRI`, `BNI`, `CIMB`, `JAGO`, `DANA`, `OVO`, `GOPAY`, `LAINNYA`).
   - Berkas XLSX dilengkapi sheet `Mutasi` (header dibekukan, dropdown Jenis), sheet `Info` (`FINREPORT-IMPORT-V1`), dan sheet `Petunjuk`.
   - Parser adapter `template` (`parsers/template.js`) dengan deteksi skor 1.0 (info sheet) dan 0.9 (header mutasi standar), parsing tanggal komponen UTC bebas pergeseran timezone, dan pelaporan `summary.invalid`.
-- **Suite Pengujian M8.2**: Skrip verifikasi mandiri `backend/scripts/verify-m8.2.js` mencakup 7 skenario pengujian komprehensif.
+- **Suite Pengujian M8.2 & M8.3**:
+  - Skrip verifikasi mandiri `backend/scripts/verify-m8.2.js` mencakup 7 skenario pengujian komprehensif termasuk invariansi 4 zona waktu (UTC, WIB, US PDT, Kiritimati) dan regresi saldo hitung baseline user non-uji.
+  - Skrip uji terisolasi rate limiter `backend/scripts/verify-rate-limit.js`.
+  - Skrip verifikasi fitur backend M8.3-1 `backend/scripts/verify-m8.3-backend.js`.
 
 ---
 

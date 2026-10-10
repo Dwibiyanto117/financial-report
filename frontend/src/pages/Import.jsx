@@ -147,6 +147,10 @@ export default function Import() {
     }
   };
 
+  const handlePasswordSubmit = (password) => {
+    handleProcessPreview(password);
+  };
+
   const handleRowChange = (rowIndex, partialChange) => {
     setReviewRows((prev) =>
       prev.map((r) => (r.index === rowIndex ? { ...r, ...partialChange } : r))
@@ -238,8 +242,12 @@ export default function Import() {
 
       {/* Tab Navigation */}
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-6" aria-label="Tabs">
+        <nav className="flex space-x-6" aria-label="Tabs" role="tablist">
           <button
+            role="tab"
+            id="tab-new"
+            aria-controls="tabpanel-new"
+            aria-selected={activeTab === "new"}
             onClick={() => setActiveTab("new")}
             className={`flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm transition ${
               activeTab === "new"
@@ -251,6 +259,10 @@ export default function Import() {
             <span>Impor Baru</span>
           </button>
           <button
+            role="tab"
+            id="tab-history"
+            aria-controls="tabpanel-history"
+            aria-selected={activeTab === "history"}
             onClick={() => setActiveTab("history")}
             className={`flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm transition ${
               activeTab === "history"
@@ -266,7 +278,7 @@ export default function Import() {
 
       {/* Tab Content */}
       {activeTab === "new" ? (
-        <div className="space-y-6">
+        <div id="tabpanel-new" role="tabpanel" aria-labelledby="tab-new" className="space-y-6">
           {pageError && (
             <div className="flex items-center gap-2.5 p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-2xl">
               <AlertCircle className="w-5 h-5 shrink-0" />
@@ -327,16 +339,18 @@ export default function Import() {
 
               {/* Pilihan Parser Adapter */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                <label id="parser-options-label" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Pilihan Parser Berkas
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div role="radiogroup" aria-labelledby="parser-options-label" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {PARSER_OPTIONS.map((opt) => {
                     const isSelected = selectedParser === opt.value;
                     return (
                       <button
                         key={opt.value}
                         type="button"
+                        role="radio"
+                        aria-checked={isSelected}
                         onClick={() => setSelectedParser(opt.value)}
                         className={`text-left p-3.5 rounded-xl border transition ${
                           isSelected
@@ -516,7 +530,9 @@ export default function Import() {
         </div>
       ) : (
         /* TAB RIWAYAT */
-        <ImportHistoryList accounts={accounts} />
+        <div id="tabpanel-history" role="tabpanel" aria-labelledby="tab-history">
+          <ImportHistoryList accounts={accounts} />
+        </div>
       )}
 
       {/* Modal Dialogs */}

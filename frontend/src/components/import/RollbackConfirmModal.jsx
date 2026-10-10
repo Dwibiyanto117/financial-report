@@ -15,8 +15,18 @@ export default function RollbackConfirmModal({ isOpen, batch, onClose, onConfirm
   if (!isOpen || !batch) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rollback-confirm-modal-title"
+        className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200"
+      >
         {/* Mobile Drag Handle */}
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
 
@@ -27,13 +37,17 @@ export default function RollbackConfirmModal({ isOpen, batch, onClose, onConfirm
               <RotateCcw className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-base sm:text-lg">Konfirmasi Rollback</h3>
+              <h3 id="rollback-confirm-modal-title" className="font-bold text-slate-800 text-base sm:text-lg">
+                Konfirmasi Rollback
+              </h3>
               <p className="text-xs text-slate-500">Batalkan transaksi dan kembalikan saldo rekening</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             disabled={loading}
+            aria-label="Tutup dialog konfirmasi rollback"
             className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition disabled:opacity-50"
           >
             <X className="w-5 h-5" />

@@ -71,11 +71,20 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
 
       {!file ? (
         <div
+          tabIndex={0}
+          role="button"
+          aria-label="Pilih atau seret berkas mutasi rekening"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition ${
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition focus:outline-hidden focus:ring-2 focus:ring-emerald-500 ${
             isDragOver
               ? "border-emerald-500 bg-emerald-50/60"
               : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300"
@@ -84,6 +93,7 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
           <input
             ref={inputRef}
             type="file"
+            aria-label="Pilih berkas mutasi CSV atau Excel"
             accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv"
             onChange={handleInputChange}
             className="hidden"
@@ -115,6 +125,7 @@ export default function ImportDropzone({ file, onFileSelect, onFileRemove }) {
               if (inputRef.current) inputRef.current.value = "";
               onFileRemove();
             }}
+            aria-label="Hapus berkas terpilih"
             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
             title="Hapus berkas"
           >

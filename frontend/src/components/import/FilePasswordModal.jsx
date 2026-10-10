@@ -37,8 +37,18 @@ export default function FilePasswordModal({ isOpen, onClose, onSubmit, errorMess
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) handleCancel();
+      }}
+      className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="file-password-modal-title"
+        className="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-2 duration-200"
+      >
         {/* Mobile Drag Handle */}
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
 
@@ -49,13 +59,17 @@ export default function FilePasswordModal({ isOpen, onClose, onSubmit, errorMess
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-base sm:text-lg">Berkas Terenkripsi</h3>
+              <h3 id="file-password-modal-title" className="font-bold text-slate-800 text-base sm:text-lg">
+                Berkas Terenkripsi
+              </h3>
               <p className="text-xs text-slate-500">Masukkan password untuk membuka berkas e-Statement</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={handleCancel}
             disabled={loading}
+            aria-label="Tutup dialog password"
             className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition disabled:opacity-50"
           >
             <X className="w-5 h-5" />

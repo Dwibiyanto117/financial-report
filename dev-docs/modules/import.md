@@ -1,11 +1,11 @@
-# Modul Import Mutasi Rekening (MOD-08 / Batch M8.1)
+# Modul Import Mutasi Rekening (MOD-08 / Batch M8.1 - M8.3)
 
-> **Status:** Backend Core Selesai & Terverifikasi (v0.4.0)
+> **Status:** Selesai & Terverifikasi (v0.5.0) — Backend Pipeline & Frontend UI Siap Pakai
 
 ---
 
 ## 1. Ringkasan Modul
-Modul Import Mutasi Rekening memungkinkan pengguna mengunggah berkas mutasi bank/e-wallet dalam format CSV, XLSX standar, dan XLSX terenkripsi password (mis. e-Statement Bank Mandiri) untuk ditinjau (preview), dikoreksi, dan di-commit menjadi transaksi keuangan secara atomik.
+Modul Import Mutasi Rekening memungkinkan pengguna mengunggah berkas mutasi bank/e-wallet dalam format CSV, XLSX standar, dan XLSX terenkripsi password (mis. e-Statement Bank Mandiri) melalui antarmuka pengguna `/import` yang responsif, untuk ditinjau (preview), dikoreksi kategorinya, dipelajari kata kuncinya, dan di-commit menjadi transaksi keuangan secara atomik, serta dapat di-rollback kapan saja.
 
 ---
 
@@ -72,6 +72,24 @@ Modul Import Mutasi Rekening memungkinkan pengguna mengunggah berkas mutasi bank
 | **Category Rule Service** | `backend/src/services/categoryRule.service.js` | CRUD aturan kata kunci per pengguna (termasuk update PUT /api/category-rules/:id) |
 | **Upload Middleware** | `backend/src/middlewares/upload.middleware.js` | Multer memoryStorage, batas 5 MB, validasi ekstensi .csv/.xlsx |
 | **Rate Limiter** | `backend/src/middlewares/rateLimiter.middleware.js` | Batas bawaan 10 request upload per 10 menit per user/IP (bisa disesuaikan via `IMPORT_RATE_LIMIT_MAX`) |
+
+### Komponen Frontend UI (M8.3)
+
+| Komponen / Modul | Lokasi File | Fungsi |
+|------------------|-------------|--------|
+| **Halaman Utama Import** | `frontend/src/pages/Import.jsx` | Alur tab ganda ("Impor Baru" dan "Riwayat Impor"), state alur Preview -> Review -> Commit -> Result |
+| **Import Service** | `frontend/src/services/importService.js` | Klien HTTP API (preview multipart, commit, rollback, list, download template blob, category rules) |
+| **Dropzone Berkas** | `frontend/src/components/import/ImportDropzone.jsx` | Drag-and-drop & file picker dengan validasi klien .csv/.xlsx maks 5 MB |
+| **Modal Unduh Template** | `frontend/src/components/import/TemplateDownloadModal.jsx` | Dialog unduhan template bank dinamis (allowlist backend) dalam format XLSX/CSV via blob |
+| **Modal Password Berkas** | `frontend/src/components/import/FilePasswordModal.jsx` | Dialog input password in-memory zero-logging untuk berkas terenkripsi |
+| **Form Pemetaan Generik** | `frontend/src/components/import/GenericMappingForm.jsx` | Form pemetaan kolom tanggal, keterangan, dan nominal (tunggal atau debit/kredit terpisah) |
+| **Bar Ringkasan** | `frontend/src/components/import/ImportSummaryBar.jsx` | Metrik total baris, transaksi baru, duplikat, tidak valid & panel collapsible peringatan |
+| **Tabel Review Desktop** | `frontend/src/components/import/ImportReviewTable.jsx` | Tampilan tabel desktop (>= 768px): aksi massal, seleksi baris, dropdown kategori, toggle learn_rule |
+| **Kartu Review Mobile** | `frontend/src/components/import/ImportReviewCards.jsx` | Tampilan kartu responsif mobile (< 768px) dengan fungsionalitas review setara |
+| **Layar Hasil Commit** | `frontend/src/components/import/ImportResultScreen.jsx` | Layar konfirmasi hasil commit (transaksi tersimpan, duplikat, dilewati, aturan tersimpan) |
+| **Daftar Riwayat** | `frontend/src/components/import/ImportHistoryList.jsx` | Tab riwayat batch impor dengan filter rekening dan status, serta pemicu rollback |
+| **Modal Konfirmasi Rollback** | `frontend/src/components/import/RollbackConfirmModal.jsx` | Dialog peringatan permanen dan konfirmasi rollback batch COMMITTED |
+| **Helper Import** | `frontend/src/utils/importHelpers.js` | Badge usulan kategori (`user_rule`, `template`, `builtin`, `fallback`) dan deteksi informasional transfer |
 
 ### Daftar Kata Kunci Bawaan Sistem (Built-in Rules)
 

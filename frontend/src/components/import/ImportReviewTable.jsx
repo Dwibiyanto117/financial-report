@@ -81,6 +81,7 @@ export default function ImportReviewTable({
                     <input
                       type="checkbox"
                       checked={!!row.include}
+                      aria-label={`Impor transaksi baris ${row.index + 1}: ${row.description}`}
                       onChange={(e) => onRowChange(row.index, { include: e.target.checked })}
                       className="w-4 h-4 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
@@ -148,6 +149,7 @@ export default function ImportReviewTable({
                   <td className="py-3 px-3 align-top">
                     <select
                       value={row.category_id || ""}
+                      aria-label={`Pilih kategori transaksi baris ${row.index + 1}`}
                       onChange={(e) =>
                         onRowChange(row.index, { category_id: e.target.value ? Number(e.target.value) : null })
                       }
@@ -168,6 +170,7 @@ export default function ImportReviewTable({
                       <input
                         type="checkbox"
                         checked={!!row.learn_rule}
+                        aria-label={`Ingat aturan kata kunci untuk baris ${row.index + 1}`}
                         onChange={(e) => onRowChange(row.index, { learn_rule: e.target.checked })}
                         className="w-3.5 h-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
@@ -180,6 +183,7 @@ export default function ImportReviewTable({
                         <input
                           type="text"
                           value={row.keyword || ""}
+                          aria-label={`Kata kunci aturan transaksi baris ${row.index + 1}`}
                           onChange={(e) => onRowChange(row.index, { keyword: e.target.value })}
                           placeholder="Kata kunci..."
                           className="w-full px-2 py-1 bg-emerald-50/50 border border-emerald-200 rounded-lg text-xs font-mono text-emerald-900 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
