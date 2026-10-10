@@ -21,6 +21,7 @@ import ImportSummaryBar from "../components/import/ImportSummaryBar";
 import ImportReviewTable from "../components/import/ImportReviewTable";
 import ImportReviewCards from "../components/import/ImportReviewCards";
 import ImportResultScreen from "../components/import/ImportResultScreen";
+import ImportHistoryList from "../components/import/ImportHistoryList";
 
 const PARSER_OPTIONS = [
   { value: "auto", label: "Otomatis (Rekomendasi)", desc: "Deteksi otomatis berdasarkan struktur dan header berkas" },
@@ -514,18 +515,8 @@ export default function Import() {
           )}
         </div>
       ) : (
-        /* TAB RIWAYAT: Placeholder untuk Batch M8.3-5 */
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="text-center py-12">
-              <History className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-slate-800">Riwayat Batch Impor</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-                Daftar riwayat batch impor dan fitur rollback akan ditampilkan pada Batch M8.3-5.
-              </p>
-            </div>
-          </div>
-        </div>
+        /* TAB RIWAYAT */
+        <ImportHistoryList accounts={accounts} />
       )}
 
       {/* Modal Dialogs */}
