@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   ArrowRightLeft,
@@ -14,7 +15,8 @@ import {
   TrendingUp,
   ArrowDownRight,
   ArrowUpRight,
-  CheckCircle2
+  CheckCircle2,
+  FileUp
 } from "lucide-react";
 import { getAccounts, updateAccount, deleteAccount } from "../services/accountService";
 import { formatCurrency } from "../utils/currency";
@@ -124,6 +126,13 @@ export default function Accounts() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Link
+            to="/import"
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 transition shadow-xs"
+          >
+            <FileUp className="w-4 h-4 text-emerald-600" />
+            <span>Import Mutasi</span>
+          </Link>
           <button
             onClick={() => setIsTransferModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold rounded-xl border border-blue-200 transition"

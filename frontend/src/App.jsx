@@ -13,6 +13,7 @@ import Transactions from "./pages/Transactions";
 import Accounts from "./pages/Accounts";
 import Categories from "./pages/Categories";
 import Reports from "./pages/Reports";
+import Import from "./pages/Import";
 import { Loader2 } from "lucide-react";
 
 function ProtectedLayout() {
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/import" element={<Import />} />
           </Route>
 
           {/* Fallback */}

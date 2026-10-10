@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   Filter,
@@ -12,7 +13,8 @@ import {
   Loader2,
   Calendar,
   AlertCircle,
-  Landmark
+  Landmark,
+  FileUp
 } from "lucide-react";
 import api from "../services/api";
 import { getAccounts } from "../services/accountService";
@@ -182,13 +184,22 @@ export default function Transactions() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Transaksi</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <Link
+            to="/import"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 shadow-xs transition"
+          >
+            <FileUp className="w-4 h-4 text-emerald-600" />
+            <span>Import Mutasi</span>
+          </Link>
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Transaksi</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}

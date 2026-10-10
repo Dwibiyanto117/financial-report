@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Landmark, ArrowUpDown, Tag, FileSpreadsheet } from "lucide-react";
+import { LayoutDashboard, Landmark, ArrowUpDown, Tag, FileSpreadsheet, FileUp } from "lucide-react";
 
 export default function Sidebar() {
   const navItems = [
@@ -9,6 +9,7 @@ export default function Sidebar() {
     { to: "/transactions", label: "Transaksi", icon: ArrowUpDown },
     { to: "/categories", label: "Kategori", icon: Tag },
     { to: "/reports", label: "Laporan & Ekspor", icon: FileSpreadsheet },
+    { to: "/import", label: "Import Mutasi", icon: FileUp },
   ];
 
   return (
