@@ -10,7 +10,7 @@
 
 1. `git pull` di branch `dev`.
 2. Batch M8.1 (core backend, skema, parser Mandiri & Generic), **Batch M8.2** (usulan rekening 4 digit akhir, belajar aturan kategori, prioritas keyword terpanjang, download template dan adapter parser template), dan **Batch M8.3** (Frontend UI `/import`, alur review/commit/rollback, perbaikan M8.3-F) sudah selesai dan lulus verifikasi 100%.
-3. Lanjutkan ke **Batch M8.4** (Adapter e-wallet & parser BCA/PDF) saat sampel berkas mutasi riil telah disediakan oleh pemilik proyek.
+3. Lanjutkan ke **Batch M8.4** sesuai `planning/M8.4-implementation-plan.md`: Jalur A (audit keamanan, mesin PDF generik, registry parser) dikerjakan sekarang; Jalur B (parser BCA dan dompet digital) diaktifkan saat sampel berkas mutasi riil tersedia.
 
 ---
 

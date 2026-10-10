@@ -31,4 +31,4 @@
 | **M7: Multi Rekening** | MOD-07 | Rekening, transfer, migrasi data, UI (M7.1-M7.2) |
 | **M8: Statement Import** | MOD-08 | Pipeline import, adapter BCA/Mandiri/e-wallet, UI (M8.1-M8.4) |
 
-> **M8.1, M8.2, dan M8.3 selesai (Backend Pipeline, Template Generator, & Frontend UI `/import`).** Titik lanjut berikutnya adalah M8.4 (adapter e-wallet & parser BCA/PDF) saat sampel berkas mutasi disediakan oleh pemilik proyek.
+> **M8.1, M8.2, dan M8.3 selesai (Backend Pipeline, Template Generator, & Frontend UI `/import`).** M8.4 siap dikerjakan: Jalur A (audit keamanan, mesin PDF generik, registry parser) aktif; Jalur B (parser BCA dan dompet digital) menunggu sampel. Rencana rinci: `planning/M8.4-implementation-plan.md`.
