@@ -66,3 +66,41 @@ export function getSuggestionBadge(source) {
       };
   }
 }
+
+/**
+ * Menghitung dan memformat tampilan baris transaksi pada riwayat batch impor.
+ *
+ * @param {object} batch
+ * @returns {{ primary: string, total: number, note: string | null, noteType: string }}
+ */
+export function getBatchRowCountDisplay(batch) {
+  const status = batch?.status;
+  const imported = batch?.imported_rows ?? batch?.importedRows ?? 0;
+  const total = batch?.total_rows ?? batch?.totalRows ?? 0;
+  const duplicate = batch?.duplicate_rows ?? batch?.duplicateRows ?? 0;
+
+  if (status === "CANCELLED") {
+    return {
+      primary: "0",
+      total,
+      note: imported > 0 ? `${imported} transaksi dibatalkan` : "Pratinjau dibuang",
+      noteType: "cancelled"
+    };
+  }
+
+  if (status === "PREVIEW") {
+    return {
+      primary: "-",
+      total,
+      note: "Belum disimpan",
+      noteType: "preview"
+    };
+  }
+
+  return {
+    primary: String(imported),
+    total,
+    note: duplicate > 0 ? `${duplicate} duplikat` : null,
+    noteType: "committed"
+  };
+}

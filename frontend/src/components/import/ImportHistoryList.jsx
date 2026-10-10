@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getImports, rollbackImport } from "../../services/importService";
+import { getBatchRowCountDisplay } from "../../utils/importHelpers";
 import RollbackConfirmModal from "./RollbackConfirmModal";
 import {
   History,
@@ -222,13 +223,30 @@ export default function ImportHistoryList({ accounts = [] }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center font-bold">
-                      <span className="text-emerald-700">{b.imported_rows || b.importedRows || 0}</span>
-                      <span className="text-slate-400 font-normal"> / {b.total_rows || b.totalRows || 0}</span>
-                      {(b.duplicate_rows || b.duplicateRows || 0) > 0 && (
-                        <p className="text-[10px] text-amber-600 font-normal mt-0.5">
-                          {b.duplicate_rows || b.duplicateRows} duplikat
-                        </p>
-                      )}
+                      {(() => {
+                        const rowDisplay = getBatchRowCountDisplay(b);
+                        return (
+                          <>
+                            <span className={rowDisplay.noteType === "committed" ? "text-emerald-700" : "text-slate-500"}>
+                              {rowDisplay.primary}
+                            </span>
+                            <span className="text-slate-400 font-normal"> / {rowDisplay.total}</span>
+                            {rowDisplay.note && (
+                              <p
+                                className={`text-[10px] font-normal mt-0.5 ${
+                                  rowDisplay.noteType === "cancelled"
+                                    ? "text-rose-600"
+                                    : rowDisplay.noteType === "preview"
+                                    ? "text-amber-600"
+                                    : "text-amber-600"
+                                }`}
+                              >
+                                {rowDisplay.note}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="py-3 px-4 text-slate-500">
                       {b.created_at || b.createdAt
@@ -287,8 +305,30 @@ export default function ImportHistoryList({ accounts = [] }) {
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Tersimpan / Total:</span>
-                    <span className="font-bold text-emerald-700">{b.imported_rows || b.importedRows || 0}</span>
-                    <span className="text-slate-400"> / {b.total_rows || b.totalRows || 0}</span>
+                    {(() => {
+                      const rowDisplay = getBatchRowCountDisplay(b);
+                      return (
+                        <>
+                          <span className={`font-bold ${rowDisplay.noteType === "committed" ? "text-emerald-700" : "text-slate-500"}`}>
+                            {rowDisplay.primary}
+                          </span>
+                          <span className="text-slate-400"> / {rowDisplay.total}</span>
+                          {rowDisplay.note && (
+                            <p
+                              className={`text-[10px] font-normal mt-0.5 ${
+                                rowDisplay.noteType === "cancelled"
+                                  ? "text-rose-600"
+                                  : rowDisplay.noteType === "preview"
+                                  ? "text-amber-600"
+                                  : "text-amber-600"
+                              }`}
+                            >
+                              {rowDisplay.note}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Waktu:</span>
